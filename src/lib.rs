@@ -3,6 +3,11 @@ use rustyline::error::ReadlineError;
 use rustyline::Editor;
 use thiserror::Error;
 
+use crate::reader::ReadError;
+
+mod ast;
+mod reader;
+
 pub fn run() -> Result<(), RunError> {
   println!("Yu v0.1.0");
 
@@ -12,7 +17,8 @@ pub fn run() -> Result<(), RunError> {
   loop {
     match editor.readline("> ") {
       Ok(line) => {
-        println!("{}", line);
+        let list = reader::read(&line)?;
+        println!("{:?}", list);
       }
       Err(ReadlineError::Interrupted) => break,
       Err(ReadlineError::Eof) => break,
@@ -25,4 +31,7 @@ pub fn run() -> Result<(), RunError> {
 }
 
 #[derive(Debug, Error)]
-pub enum RunError {}
+pub enum RunError {
+  #[error("reading failed: {0}")]
+  Read(#[from] ReadError),
+}
