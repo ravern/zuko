@@ -3,7 +3,8 @@ pub enum Expr {
   List(Box<List>),
   Add,
   Number(f64),
-  Symbol(u64),
+  Symbol(String),
+  Ident(String),
 }
 
 #[derive(Debug)]

@@ -34,7 +34,11 @@ where
 
     let value = match self.source.peek() {
       Some('(') => List(Box::new(self.read_list()?)),
+      Some(':') => Symbol(self.read_symbol()?),
       Some(char) if char.is_digit(10) => Number(self.read_number()?),
+      Some(char) if char.is_alphabetic() && char.is_lowercase() => {
+        Ident(self.read_ident()?)
+      }
       Some('+') => {
         self.source.next();
         Add
@@ -101,6 +105,47 @@ where
     let number = buf.parse().unwrap();
 
     Ok(number)
+  }
+
+  pub fn read_symbol(&mut self) -> Result<String, ReadError> {
+    use ReadError::*;
+
+    match self.source.peek() {
+      Some(':') => {}
+      Some(char) => return Err(UnexpectedChar(*char)),
+      None => return Err(UnexpectedEndOfInput),
+    }
+    self.source.next();
+
+    self.read_ident()
+  }
+
+  pub fn read_ident(&mut self) -> Result<String, ReadError> {
+    use ReadError::*;
+
+    let mut buf = Vec::new();
+    let mut prev_hyphen_dist = 0;
+
+    loop {
+      match self.source.peek() {
+        Some(char) if char.is_alphabetic() && char.is_lowercase() => {}
+        Some('-') if prev_hyphen_dist > 0 => {
+          prev_hyphen_dist = -1;
+        }
+        Some(')') => break,
+        Some(char) if char.is_whitespace() => break,
+        Some(char) => return Err(UnexpectedChar(*char)),
+        None => break,
+      }
+      let char = self.source.next().unwrap();
+
+      buf.push(char);
+      prev_hyphen_dist += 1;
+    }
+
+    let buf: String = buf.into_iter().collect();
+
+    Ok(buf)
   }
 
   pub fn skip_whitespace(&mut self) {
