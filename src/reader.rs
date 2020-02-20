@@ -2,9 +2,9 @@ use std::iter::{Iterator, Peekable};
 
 use thiserror::Error;
 
-use crate::ast::{List, Value};
+use crate::ast::{Expr, List};
 
-pub fn read(source: &str) -> Result<Value, ReadError> {
+pub fn read(source: &str) -> Result<Expr, ReadError> {
   let mut source = source.chars().peekable();
   read_value(&mut source)
 }
@@ -13,16 +13,16 @@ pub fn read(source: &str) -> Result<Value, ReadError> {
 pub enum ReadError {
   #[error("unexpected end of input")]
   UnexpectedEndOfInput,
-  #[error("unexpected char {0}")]
+  #[error("unexpected char '{0}'")]
   UnexpectedChar(char),
 }
 
-fn read_value<I>(source: &mut Peekable<I>) -> Result<Value, ReadError>
+fn read_value<I>(source: &mut Peekable<I>) -> Result<Expr, ReadError>
 where
   I: Iterator<Item = char>,
 {
+  use Expr::*;
   use ReadError::*;
-  use Value::*;
 
   skip_whitespace(source);
 
@@ -90,7 +90,7 @@ where
       Some(')') => break,
       Some(char) if char.is_whitespace() => break,
       Some(char) => return Err(UnexpectedChar(*char)),
-      None => return Err(UnexpectedEndOfInput),
+      None => break,
     }
     let char = source.next().unwrap();
 
