@@ -1,44 +1,47 @@
 use thiserror::Error;
 
-use crate::ast::{List, Value};
+use crate::ast::{self, Expr, List};
 
-pub fn eval(value: Value) -> Result<Value, EvalError> {
-  use Value::*;
+pub fn eval(expr: Expr) -> Result<Expr, EvalError> {
+  use Expr::*;
 
-  match value {
+  match expr {
     List(list) => eval_list(*list),
-    value => Ok(value),
+    expr => Ok(expr),
   }
 }
 
 #[derive(Debug, Error)]
 pub enum EvalError {
-  #[error("can only add numbers")]
-  OnlyAddNumbers,
+  #[error("type is invalid")]
+  InvalidType,
   #[error("expression not callable")]
   NotCallable,
 }
 
-fn eval_list(list: List) -> Result<Value, EvalError> {
-  use Value::*;
+fn eval_list(list: List) -> Result<Expr, EvalError> {
+  use EvalError::*;
+  use Expr::*;
 
-  let head = list.head;
-  let tail = list.tail;
+  let ast::List { head, tail } = list;
 
   match head {
     Add => eval_add(tail),
-    _ => Err(EvalError::NotCallable),
+    _ => Err(NotCallable),
   }
 }
 
-fn eval_add(args: Vec<Value>) -> Result<Value, EvalError> {
-  let arguments = args
+fn eval_add(tail: Vec<Expr>) -> Result<Expr, EvalError> {
+  use EvalError::*;
+  use Expr::*;
+
+  let arguments = tail
     .into_iter()
-    .map(|arg| match arg {
-      Value::Number(number) => Ok(number),
-      _ => Err(EvalError::OnlyAddNumbers),
+    .map(|expr| match expr {
+      Number(number) => Ok(number),
+      _ => Err(InvalidType),
     })
     .collect::<Result<Vec<f64>, EvalError>>()?;
 
-  Ok(Value::Number(arguments.into_iter().sum()))
+  Ok(Expr::Number(arguments.into_iter().sum()))
 }

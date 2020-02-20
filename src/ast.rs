@@ -1,5 +1,5 @@
 #[derive(Debug)]
-pub enum Value {
+pub enum Expr {
   List(Box<List>),
   Add,
   Number(f64),
@@ -8,6 +8,6 @@ pub enum Value {
 
 #[derive(Debug)]
 pub struct List {
-  pub head: Value,
-  pub tail: Vec<Value>,
+  pub head: Expr,
+  pub tail: Vec<Expr>,
 }

@@ -3,6 +3,7 @@ use rustyline::error::ReadlineError;
 use rustyline::Editor;
 use thiserror::Error;
 
+use crate::ast::Expr;
 use crate::evaluator::EvalError;
 use crate::reader::ReadError;
 
@@ -18,11 +19,10 @@ pub fn run() -> Result<(), RunError> {
 
   loop {
     match editor.readline("> ") {
-      Ok(line) => {
-        let value = reader::read(&line)?;
-        let value = evaluator::eval(value)?;
-        println!("{:?}", value);
-      }
+      Ok(line) => match run_line(&line) {
+        Ok(expr) => println!("{:?}", expr),
+        Err(error) => println!("error: {}", error),
+      },
       Err(ReadlineError::Interrupted) => break,
       Err(ReadlineError::Eof) => break,
       Err(_) => println!("error: failed to read line"),
@@ -33,10 +33,16 @@ pub fn run() -> Result<(), RunError> {
   Ok(())
 }
 
+fn run_line(line: &str) -> Result<Expr, RunError> {
+  let expr = reader::read(line)?;
+  let expr = evaluator::eval(expr)?;
+  Ok(expr)
+}
+
 #[derive(Debug, Error)]
 pub enum RunError {
-  #[error("reading failed: {0}")]
+  #[error("{0}")]
   Read(#[from] ReadError),
-  #[error("evaluation failed: {0}")]
+  #[error("{0}")]
   Eval(#[from] EvalError),
 }
