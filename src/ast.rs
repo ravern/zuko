@@ -5,6 +5,7 @@ pub enum Expr {
   Number(f64),
   Symbol(String),
   Ident(String),
+  String(String),
 }
 
 #[derive(Debug)]
