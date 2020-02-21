@@ -4,12 +4,12 @@ use rustyline::Editor;
 use thiserror::Error;
 
 use crate::ast::Expr;
-use crate::evaluator::EvalError;
-use crate::reader::ReadError;
+use crate::eval::EvalError;
+use crate::read::ReadError;
 
 mod ast;
-mod evaluator;
-mod reader;
+mod eval;
+mod read;
 
 pub fn run() -> Result<(), RunError> {
   println!("Yu v0.1.0");
@@ -34,8 +34,8 @@ pub fn run() -> Result<(), RunError> {
 }
 
 fn run_line(line: &str) -> Result<Expr, RunError> {
-  let expr = reader::read(line)?;
-  let expr = evaluator::eval(expr)?;
+  let expr = read::read(line)?;
+  let expr = eval::eval(expr)?;
   Ok(expr)
 }
 
