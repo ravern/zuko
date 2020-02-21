@@ -35,6 +35,7 @@ where
     let value = match self.source.peek() {
       Some('(') => List(Box::new(self.read_list()?)),
       Some(':') => Symbol(self.read_symbol()?),
+      Some('"') => String(self.read_string()?),
       Some(char) if char.is_digit(10) => Number(self.read_number()?),
       Some(char) if char.is_alphabetic() && char.is_lowercase() => {
         Ident(self.read_ident()?)
@@ -144,6 +145,37 @@ where
     }
 
     let buf: String = buf.into_iter().collect();
+
+    Ok(buf)
+  }
+
+  pub fn read_string(&mut self) -> Result<String, ReadError> {
+    use ReadError::*;
+
+    match self.source.peek() {
+      Some('"') => {}
+      Some(char) => return Err(UnexpectedChar(*char)),
+      None => return Err(UnexpectedEndOfInput),
+    }
+    self.source.next();
+
+    let mut buf = Vec::new();
+
+    loop {
+      match self.source.peek() {
+        Some('"') => break,
+        Some(_) => {}
+        None => return Err(UnexpectedEndOfInput),
+      }
+      let char = self.source.next().unwrap();
+
+      buf.push(char);
+    }
+
+    let buf: String = buf.into_iter().collect();
+
+    // Get rid of final quote.
+    self.source.next();
 
     Ok(buf)
   }
