@@ -1,6 +1,8 @@
-#[derive(Debug)]
+use std::rc::Rc;
+
+#[derive(Clone, Debug)]
 pub enum Expr {
-  List(Box<List>),
+  List(Rc<List>),
   Add,
   Number(f64),
   Symbol(String),
