@@ -1,4 +1,5 @@
 use std::iter::{Iterator, Peekable};
+use std::rc::Rc;
 
 use thiserror::Error;
 
@@ -33,7 +34,7 @@ where
     self.skip_whitespace();
 
     let value = match self.source.peek() {
-      Some('(') => List(Box::new(self.read_list()?)),
+      Some('(') => List(Rc::new(self.read_list()?)),
       Some(':') => Symbol(self.read_symbol()?),
       Some('"') => String(self.read_string()?),
       Some(char) if char.is_digit(10) => Number(self.read_number()?),
