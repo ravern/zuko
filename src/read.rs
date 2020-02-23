@@ -1,13 +1,12 @@
 use std::iter::{Iterator, Peekable};
-use std::rc::Rc;
 
 use thiserror::Error;
 
-use crate::ast::{Expr, List};
+use crate::ast::{Atom, Expr, List};
 
 pub fn read(source: &str) -> Result<Expr, ReadError> {
   let mut reader = Reader::new(source.chars());
-  reader.read_value()
+  reader.read_expr()
 }
 
 pub struct Reader<I>
@@ -27,31 +26,21 @@ where
     }
   }
 
-  pub fn read_value(&mut self) -> Result<Expr, ReadError> {
+  pub fn read_expr(&mut self) -> Result<Expr, ReadError> {
     use Expr::*;
     use ReadError::*;
 
     self.skip_whitespace();
 
-    let value = match self.source.peek() {
-      Some('(') => List(Rc::new(self.read_list()?)),
-      Some(':') => Symbol(self.read_symbol()?),
-      Some('"') => String(self.read_string()?),
-      Some(char) if char.is_digit(10) => Number(self.read_number()?),
-      Some(char) if char.is_alphabetic() && char.is_lowercase() => {
-        Ident(self.read_ident()?)
-      }
-      Some('+') => {
-        self.source.next();
-        Add
-      }
-      Some(char) => return Err(UnexpectedChar(*char)),
+    let expr = match self.source.peek() {
+      Some('(') => List(self.read_list()?),
+      Some(_) => Atom(self.read_atom()?),
       None => return Err(UnexpectedEndOfInput),
     };
 
     self.skip_whitespace();
 
-    Ok(value)
+    Ok(expr)
   }
 
   pub fn read_list(&mut self) -> Result<List, ReadError> {
@@ -64,7 +53,7 @@ where
     }
     self.source.next();
 
-    let head = self.read_value()?;
+    let head = Box::new(self.read_expr()?);
 
     let mut tail = Vec::new();
     loop {
@@ -77,10 +66,26 @@ where
         _ => {}
       }
 
-      tail.push(self.read_value()?);
+      tail.push(self.read_expr()?);
     }
 
     Ok(List { head, tail })
+  }
+
+  pub fn read_atom(&mut self) -> Result<Atom, ReadError> {
+    use Atom::*;
+    use ReadError::*;
+
+    let atom = match self.source.peek() {
+      Some('"') => String(self.read_string()?),
+      Some(char) if char.is_digit(10) => Number(self.read_number()?),
+      Some(char) if is_symbol(*char) => Symbol(self.read_symbol()?),
+      Some(char) if is_operator(*char) => Symbol(self.read_operator_symbol()?),
+      Some(char) => return Err(UnexpectedChar(*char)),
+      None => return Err(UnexpectedEndOfInput),
+    };
+
+    Ok(atom)
   }
 
   pub fn read_number(&mut self) -> Result<f64, ReadError> {
@@ -112,19 +117,6 @@ where
   pub fn read_symbol(&mut self) -> Result<String, ReadError> {
     use ReadError::*;
 
-    match self.source.peek() {
-      Some(':') => {}
-      Some(char) => return Err(UnexpectedChar(*char)),
-      None => return Err(UnexpectedEndOfInput),
-    }
-    self.source.next();
-
-    self.read_ident()
-  }
-
-  pub fn read_ident(&mut self) -> Result<String, ReadError> {
-    use ReadError::*;
-
     let mut buf = Vec::new();
     let mut prev_hyphen_dist = 0;
 
@@ -148,6 +140,22 @@ where
     let buf: String = buf.into_iter().collect();
 
     Ok(buf)
+  }
+
+  pub fn read_operator_symbol(&mut self) -> Result<String, ReadError> {
+    use ReadError::*;
+
+    let operator = match self.source.peek() {
+      Some('+') => "+",
+      Some('-') => "-",
+      Some('*') => "*",
+      Some('/') => "/",
+      Some(char) => return Err(UnexpectedChar(*char)),
+      None => return Err(UnexpectedEndOfInput),
+    };
+    self.source.next();
+
+    Ok(operator.to_string())
   }
 
   pub fn read_string(&mut self) -> Result<String, ReadError> {
@@ -199,4 +207,15 @@ pub enum ReadError {
   UnexpectedEndOfInput,
   #[error("unexpected char '{0}'")]
   UnexpectedChar(char),
+}
+
+fn is_symbol(char: char) -> bool {
+  char.is_alphabetic() && char.is_lowercase()
+}
+
+fn is_operator(char: char) -> bool {
+  match char {
+    '+' | '-' | '*' | '/' => true,
+    _ => false,
+  }
 }
