@@ -53,9 +53,15 @@ where
     }
     self.source.next();
 
-    let head = Box::new(self.read_expr()?);
+    // Catch empty lists
+    self.skip_whitespace();
+    if let Some(')') = self.source.peek() {
+      self.source.next();
+      return Ok(List::nil());
+    }
 
-    let mut tail = Vec::new();
+    let mut exprs = vec![self.read_expr()?];
+
     loop {
       match self.source.peek() {
         Some(')') => {
@@ -66,10 +72,16 @@ where
         _ => {}
       }
 
-      tail.push(self.read_expr()?);
+      exprs.push(self.read_expr()?);
     }
 
-    Ok(List { head, tail })
+    exprs.reverse();
+    let mut list = List::nil();
+    for expr in exprs.into_iter() {
+      list = List::cons(expr, list);
+    }
+
+    Ok(list)
   }
 
   pub fn read_atom(&mut self) -> Result<Atom, ReadError> {
