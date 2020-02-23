@@ -1,10 +1,10 @@
 use thiserror::Error;
 
-use crate::ast::{self, Atom, Expr, Function, List, Scope};
+use crate::ast::{Atom, Expr, Function, List, Scope};
 
 pub fn eval(expr: Expr) -> Result<Expr, EvalError> {
   let mut evalutor = Evaluator::new();
-  evalutor.eval_expr(&expr)
+  evalutor.eval_expr(expr)
 }
 
 pub struct Evaluator {
@@ -18,7 +18,7 @@ impl Evaluator {
     }
   }
 
-  pub fn eval_expr(&mut self, expr: &Expr) -> Result<Expr, EvalError> {
+  pub fn eval_expr(&mut self, expr: Expr) -> Result<Expr, EvalError> {
     use Expr::*;
 
     match expr {
@@ -27,21 +27,18 @@ impl Evaluator {
     }
   }
 
-  pub fn eval_list(&mut self, list: &List) -> Result<Expr, EvalError> {
-    let ast::List { head, tail } = list;
-    self.eval_call(head, tail)
-  }
-
-  pub fn eval_call(
-    &mut self,
-    head: &Expr,
-    tail: &[Expr],
-  ) -> Result<Expr, EvalError> {
+  pub fn eval_list(&mut self, list: List) -> Result<Expr, EvalError> {
     use Atom::*;
     use EvalError::*;
 
-    if let Expr::Atom(Symbol(symbol)) = head {
-      if let Some(expr) = self.eval_call_special(symbol, tail)? {
+    if list.is_nil() {
+      return Ok(Expr::List(list));
+    }
+
+    let (head, tail) = list.decons().unwrap();
+
+    if let Expr::Atom(Symbol(symbol)) = head.clone() {
+      if let Some(expr) = self.eval_call_special(symbol, tail.clone())? {
         return Ok(expr);
       }
     }
@@ -61,17 +58,17 @@ impl Evaluator {
 
     function
       .parameters
-      .iter()
-      .zip(tail)
+      .into_iter()
+      .zip(tail.into_iter())
       .map(|(symbol, expr)| {
-        self.eval_call_define(&vec![
-          Expr::Atom(Symbol(symbol.clone())),
-          expr.clone(),
-        ])
+        self.eval_call_define(List::cons(
+          Expr::Atom(Symbol(symbol)),
+          List::cons(expr, List::nil()),
+        ))
       })
       .collect::<Result<Vec<Expr>, EvalError>>()?;
 
-    let expr = self.eval_expr(&function.body)?;
+    let expr = self.eval_expr(function.body)?;
 
     self.scopes.pop();
 
@@ -80,10 +77,10 @@ impl Evaluator {
 
   pub fn eval_call_special(
     &mut self,
-    head: &str,
-    tail: &[Expr],
+    head: String,
+    tail: List,
   ) -> Result<Option<Expr>, EvalError> {
-    let result = match head {
+    let result = match head.as_str() {
       "begin" => self.eval_call_begin(tail),
       "define" => self.eval_call_define(tail),
       "function" => self.eval_call_function(tail),
@@ -94,7 +91,7 @@ impl Evaluator {
     result.map(Some)
   }
 
-  pub fn eval_call_begin(&mut self, tail: &[Expr]) -> Result<Expr, EvalError> {
+  pub fn eval_call_begin(&mut self, tail: List) -> Result<Expr, EvalError> {
     use EvalError::*;
 
     if tail.len() < 1 {
@@ -102,47 +99,46 @@ impl Evaluator {
     }
 
     let mut tail = tail
-      .iter()
+      .into_iter()
       .map(|expr| self.eval_expr(expr))
       .collect::<Result<Vec<Expr>, EvalError>>()?;
 
     Ok(tail.pop().unwrap())
   }
 
-  pub fn eval_call_define(&mut self, tail: &[Expr]) -> Result<Expr, EvalError> {
+  pub fn eval_call_define(&mut self, tail: List) -> Result<Expr, EvalError> {
     use EvalError::*;
 
     if tail.len() != 2 {
       return Err(WrongArity);
     }
 
-    let symbol = self.as_symbol(tail.get(0).unwrap())?;
-    let expr = self.eval_expr(tail.get(1).unwrap())?;
+    let (head, tail) = tail.decons().unwrap();
+    let symbol = self.as_symbol(head)?;
+    let (head, _) = tail.decons().unwrap();
+    let expr = self.eval_expr(head)?;
 
     self.scopes.last_mut().unwrap().set(symbol, expr.clone());
 
     Ok(expr)
   }
 
-  pub fn eval_call_function(
-    &mut self,
-    tail: &[Expr],
-  ) -> Result<Expr, EvalError> {
+  pub fn eval_call_function(&mut self, tail: List) -> Result<Expr, EvalError> {
     use EvalError::*;
 
     if tail.len() != 2 {
       return Err(WrongArity);
     }
 
-    let parameters_list = self.as_list(tail.get(0).unwrap())?;
-    let body = tail.get(1).unwrap().clone();
+    let (head, tail) = tail.decons().unwrap();
+    let parameters = self.as_list(head)?;
+    let (head, _) = tail.decons().unwrap();
+    let body = head;
 
-    let mut parameters = parameters_list
-      .tail
-      .iter()
+    let parameters = parameters
+      .into_iter()
       .map(|expr| self.as_symbol(expr))
       .collect::<Result<Vec<String>, EvalError>>()?;
-    parameters.insert(0, self.as_symbol(&parameters_list.head)?);
 
     let scope = self.scopes.last().unwrap().clone();
 
@@ -153,50 +149,51 @@ impl Evaluator {
     }))))
   }
 
-  pub fn eval_call_quote(&mut self, tail: &[Expr]) -> Result<Expr, EvalError> {
+  pub fn eval_call_quote(&mut self, tail: List) -> Result<Expr, EvalError> {
     use EvalError::*;
 
     if tail.len() != 1 {
       return Err(WrongArity);
     }
 
-    let expr = tail.get(0).unwrap().clone();
+    let (head, _) = tail.decons().unwrap();
+    let expr = head;
 
     Ok(expr)
   }
 
-  pub fn eval_atom(&mut self, atom: &Atom) -> Result<Expr, EvalError> {
+  pub fn eval_atom(&mut self, atom: Atom) -> Result<Expr, EvalError> {
     use Atom::*;
 
     match atom {
       Symbol(symbol) => self.eval_symbol(symbol),
-      atom => Ok(Expr::Atom(atom.clone())),
+      atom => Ok(Expr::Atom(atom)),
     }
   }
 
-  pub fn eval_symbol(&mut self, symbol: &str) -> Result<Expr, EvalError> {
+  pub fn eval_symbol(&mut self, symbol: String) -> Result<Expr, EvalError> {
     use EvalError::*;
 
     for scope in self.scopes.iter() {
-      if let Some(expr) = scope.get(symbol) {
+      if let Some(expr) = scope.get(&symbol) {
         return Ok(expr.clone());
       }
     }
 
-    Err(UndefinedSymbol(symbol.to_owned()))
+    Err(UndefinedSymbol(symbol))
   }
 
-  fn as_symbol(&mut self, expr: &Expr) -> Result<String, EvalError> {
+  fn as_symbol(&mut self, expr: Expr) -> Result<String, EvalError> {
     use Atom::*;
     use EvalError::*;
 
     match expr {
-      Expr::Atom(Symbol(symbol)) => Ok(symbol.to_owned()),
+      Expr::Atom(Symbol(symbol)) => Ok(symbol),
       _ => Err(InvalidType),
     }
   }
 
-  fn as_list<'a>(&mut self, expr: &'a Expr) -> Result<&'a List, EvalError> {
+  fn as_list(&mut self, expr: Expr) -> Result<List, EvalError> {
     use EvalError::*;
     use Expr::*;
 
@@ -206,12 +203,12 @@ impl Evaluator {
     }
   }
 
-  fn as_number(&mut self, expr: &Expr) -> Result<f64, EvalError> {
+  fn as_number(&mut self, expr: Expr) -> Result<f64, EvalError> {
     use Atom::*;
     use EvalError::*;
 
     match expr {
-      Expr::Atom(Number(number)) => Ok(number.clone()),
+      Expr::Atom(Number(number)) => Ok(number),
       _ => Err(InvalidType),
     }
   }
