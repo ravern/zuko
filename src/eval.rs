@@ -1,6 +1,6 @@
 use thiserror::Error;
 
-use crate::ast::{Atom, Expr, Function, List, Native, Scope};
+use crate::ast::{Atom, Expr, Function, List, Native, Operator, Scope};
 
 pub fn eval(expr: Expr) -> Result<Expr, EvalError> {
   let mut evalutor = Evaluator::new();
@@ -85,6 +85,7 @@ impl Evaluator {
       Define => self.eval_call_define(tail),
       Function => self.eval_call_function(tail),
       Quote => self.eval_call_quote(tail),
+      Operator(operator) => self.eval_call_operator(operator, tail),
     }
   }
 
@@ -154,6 +155,38 @@ impl Evaluator {
     Ok(expr)
   }
 
+  pub fn eval_call_operator(
+    &mut self,
+    operator: Operator,
+    tail: List,
+  ) -> Result<Expr, EvalError> {
+    use EvalError::*;
+    use Operator::*;
+
+    if tail.len() != 2 {
+      return Ok(Expr::Atom(Atom::Number(0.0)));
+    }
+
+    let left = tail.get(0).unwrap().clone();
+    let right = tail.get(1).unwrap().clone();
+
+    let left = self.eval_expr(left)?;
+    let right = self.eval_expr(right)?;
+
+    let left = self.as_number(left)?;
+    let right = self.as_number(right)?;
+
+    let result = match operator {
+      Add => left + right,
+      Sub => left - right,
+      Mul => left * right,
+      Div => left / right,
+      _ => return Err(NotCallable),
+    };
+
+    Ok(Expr::Atom(Atom::Number(result)))
+  }
+
   pub fn eval_atom(&mut self, atom: Atom) -> Result<Expr, EvalError> {
     use Atom::*;
 
@@ -180,13 +213,18 @@ impl Evaluator {
   }
 
   pub fn eval_special_symbol(&mut self, symbol: &str) -> Option<Expr> {
-    use Native::*;
+    use Native::{Begin, Define, Function, Quote};
+    use Operator::*;
 
     let native = match symbol {
       "begin" => Begin,
       "define" => Define,
       "function" => Function,
       "quote" => Quote,
+      "+" => Native::Operator(Add),
+      "-" => Native::Operator(Sub),
+      "*" => Native::Operator(Mul),
+      "/" => Native::Operator(Div),
       _ => return None,
     };
 
