@@ -4,40 +4,47 @@ use std::rc::Rc;
 use super::Expr;
 
 #[derive(Clone, Debug)]
-pub struct List(Option<Rc<Node>>);
+pub enum List {
+  Cons(Rc<Node>),
+  Nil,
+}
 
 #[derive(Clone, Debug)]
-struct Node {
-  head: Expr,
-  tail: List,
+pub struct Node {
+  pub head: Expr,
+  pub tail: List,
 }
 
 impl List {
   pub fn cons(head: Expr, tail: List) -> List {
+    use List::*;
+
     let node = Node { head, tail };
-    List(Some(Rc::new(node)))
+    Cons(Rc::new(node))
   }
 
-  pub fn nil() -> List {
-    List(None)
-  }
+  pub fn get(&self, index: usize) -> Option<&Expr> {
+    use List::*;
 
-  pub fn decons(&self) -> Option<(Expr, List)> {
-    if let Some(node) = self.0.as_ref() {
-      let head = node.head.clone();
-      let tail = node.tail.clone();
-      Some((head, tail))
+    let node = match self {
+      Cons(node) => node,
+      Nil => return None,
+    };
+
+    if index == 0 {
+      Some(&node.head)
     } else {
-      None
+      node.tail.get(index - 1)
     }
   }
 
   pub fn len(&self) -> usize {
-    self.0.as_ref().map(|node| 1 + node.tail.len()).unwrap_or(0)
-  }
+    use List::*;
 
-  pub fn is_nil(&self) -> bool {
-    self.0.is_none()
+    match self {
+      Cons(node) => 1 + node.tail.len(),
+      Nil => 0,
+    }
   }
 
   pub fn into_iter(self) -> IntoIter {
@@ -51,11 +58,15 @@ impl Iterator for IntoIter {
   type Item = Expr;
 
   fn next(&mut self) -> Option<Expr> {
-    if self.0.is_nil() {
-      return None;
-    }
+    use List::*;
 
-    let (head, tail) = self.0.decons().unwrap();
+    let node = match &self.0 {
+      Cons(node) => node.as_ref(),
+      Nil => return None,
+    };
+
+    let head = node.head.clone();
+    let tail = node.tail.clone();
 
     self.0 = tail;
 
