@@ -1,6 +1,6 @@
 use thiserror::Error;
 
-use crate::ast::{Atom, Expr, Function, List, Node, Scope};
+use crate::ast::{Atom, Expr, Function, List, Scope};
 
 pub fn eval(expr: Expr) -> Result<Expr, EvalError> {
   let mut evalutor = Evaluator::new();
