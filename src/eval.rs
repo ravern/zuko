@@ -1,6 +1,6 @@
 use thiserror::Error;
 
-use crate::ast::{Atom, Expr, Function, List, Scope};
+use crate::ast::{Atom, Expr, Function, List, Native, Scope};
 
 pub fn eval(expr: Expr) -> Result<Expr, EvalError> {
   let mut evalutor = Evaluator::new();
@@ -40,16 +40,11 @@ impl Evaluator {
     let head = node.head.clone();
     let tail = node.tail.clone();
 
-    if let Expr::Atom(Symbol(symbol)) = head.clone() {
-      if let Some(expr) = self.eval_call_special(symbol, tail.clone())? {
-        return Ok(expr);
-      }
-    }
-
     let head = self.eval_expr(head)?;
 
     let function = match head {
       Expr::Atom(Function(function)) => function,
+      Expr::Atom(Native(native)) => return self.eval_call_native(native, tail),
       _ => return Err(NotCallable),
     };
 
@@ -78,20 +73,19 @@ impl Evaluator {
     Ok(expr)
   }
 
-  pub fn eval_call_special(
+  pub fn eval_call_native(
     &mut self,
-    head: String,
+    native: Native,
     tail: List,
-  ) -> Result<Option<Expr>, EvalError> {
-    let result = match head.as_str() {
-      "begin" => self.eval_call_begin(tail),
-      "define" => self.eval_call_define(tail),
-      "function" => self.eval_call_function(tail),
-      "quote" => self.eval_call_quote(tail),
-      _ => return Ok(None),
-    };
+  ) -> Result<Expr, EvalError> {
+    use Native::*;
 
-    result.map(Some)
+    match native {
+      Begin => self.eval_call_begin(tail),
+      Define => self.eval_call_define(tail),
+      Function => self.eval_call_function(tail),
+      Quote => self.eval_call_quote(tail),
+    }
   }
 
   pub fn eval_call_begin(&mut self, tail: List) -> Result<Expr, EvalError> {
@@ -172,6 +166,10 @@ impl Evaluator {
   pub fn eval_symbol(&mut self, symbol: String) -> Result<Expr, EvalError> {
     use EvalError::*;
 
+    if let Some(expr) = self.eval_special_symbol(&symbol) {
+      return Ok(expr);
+    }
+
     for scope in self.scopes.iter() {
       if let Some(expr) = scope.get(&symbol) {
         return Ok(expr.clone());
@@ -179,6 +177,20 @@ impl Evaluator {
     }
 
     Err(UndefinedSymbol(symbol))
+  }
+
+  pub fn eval_special_symbol(&mut self, symbol: &str) -> Option<Expr> {
+    use Native::*;
+
+    let native = match symbol {
+      "begin" => Begin,
+      "define" => Define,
+      "function" => Function,
+      "quote" => Quote,
+      _ => return None,
+    };
+
+    Some(Expr::Atom(Atom::Native(native)))
   }
 
   fn as_symbol(&mut self, expr: Expr) -> Result<String, EvalError> {
