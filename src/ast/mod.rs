@@ -32,6 +32,15 @@ pub enum Native {
   Define,
   Function,
   Quote,
+  Operator(Operator),
+}
+
+#[derive(Clone, Debug)]
+pub enum Operator {
+  Add,
+  Sub,
+  Mul,
+  Div,
 }
 
 #[derive(Clone, Debug)]
