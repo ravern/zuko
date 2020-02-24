@@ -44,6 +44,7 @@ where
   }
 
   pub fn read_list(&mut self) -> Result<List, ReadError> {
+    use List::*;
     use ReadError::*;
 
     match self.source.peek() {
@@ -57,7 +58,7 @@ where
     self.skip_whitespace();
     if let Some(')') = self.source.peek() {
       self.source.next();
-      return Ok(List::nil());
+      return Ok(List::Nil);
     }
 
     let mut exprs = vec![self.read_expr()?];
@@ -76,7 +77,7 @@ where
     }
 
     exprs.reverse();
-    let mut list = List::nil();
+    let mut list = Nil;
     for expr in exprs.into_iter() {
       list = List::cons(expr, list);
     }

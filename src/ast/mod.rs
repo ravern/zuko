@@ -1,6 +1,6 @@
 use std::collections::BTreeMap;
 
-pub use self::list::List;
+pub use self::list::{List, Node};
 
 pub mod list;
 

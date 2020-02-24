@@ -1,6 +1,6 @@
 use thiserror::Error;
 
-use crate::ast::{Atom, Expr, Function, List, Scope};
+use crate::ast::{Atom, Expr, Function, List, Node, Scope};
 
 pub fn eval(expr: Expr) -> Result<Expr, EvalError> {
   let mut evalutor = Evaluator::new();
@@ -30,12 +30,15 @@ impl Evaluator {
   pub fn eval_list(&mut self, list: List) -> Result<Expr, EvalError> {
     use Atom::*;
     use EvalError::*;
+    use List::*;
 
-    if list.is_nil() {
-      return Ok(Expr::List(list));
-    }
+    let node = match &list {
+      Cons(node) => node.as_ref(),
+      Nil => return Ok(Expr::List(Nil)),
+    };
 
-    let (head, tail) = list.decons().unwrap();
+    let head = node.head.clone();
+    let tail = node.tail.clone();
 
     if let Expr::Atom(Symbol(symbol)) = head.clone() {
       if let Some(expr) = self.eval_call_special(symbol, tail.clone())? {
@@ -63,7 +66,7 @@ impl Evaluator {
       .map(|(symbol, expr)| {
         self.eval_call_define(List::cons(
           Expr::Atom(Symbol(symbol)),
-          List::cons(expr, List::nil()),
+          List::cons(expr, Nil),
         ))
       })
       .collect::<Result<Vec<Expr>, EvalError>>()?;
@@ -113,10 +116,8 @@ impl Evaluator {
       return Err(WrongArity);
     }
 
-    let (head, tail) = tail.decons().unwrap();
-    let symbol = self.as_symbol(head)?;
-    let (head, _) = tail.decons().unwrap();
-    let expr = self.eval_expr(head)?;
+    let symbol = self.as_symbol(tail.get(0).unwrap().clone())?;
+    let expr = self.eval_expr(tail.get(1).unwrap().clone())?;
 
     self.scopes.last_mut().unwrap().set(symbol, expr.clone());
 
@@ -130,10 +131,8 @@ impl Evaluator {
       return Err(WrongArity);
     }
 
-    let (head, tail) = tail.decons().unwrap();
-    let parameters = self.as_list(head)?;
-    let (head, _) = tail.decons().unwrap();
-    let body = head;
+    let parameters = self.as_list(tail.get(0).unwrap().clone())?;
+    let body = tail.get(1).unwrap().clone();
 
     let parameters = parameters
       .into_iter()
@@ -156,8 +155,7 @@ impl Evaluator {
       return Err(WrongArity);
     }
 
-    let (head, _) = tail.decons().unwrap();
-    let expr = head;
+    let expr = tail.get(0).unwrap().clone();
 
     Ok(expr)
   }
