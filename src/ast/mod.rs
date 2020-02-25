@@ -1,4 +1,6 @@
-use std::collections::BTreeMap;
+use std::rc::Rc;
+
+use crate::env::Frame;
 
 pub use self::list::{List, Node};
 
@@ -21,7 +23,7 @@ pub enum Atom {
 
 #[derive(Clone, Debug)]
 pub struct Function {
-  pub scope: Scope,
+  pub frame: Rc<Frame>,
   pub parameters: Vec<String>,
   pub body: Expr,
 }
@@ -41,25 +43,4 @@ pub enum Operator {
   Sub,
   Mul,
   Div,
-}
-
-#[derive(Clone, Debug)]
-pub struct Scope {
-  variables: BTreeMap<String, Expr>,
-}
-
-impl Scope {
-  pub fn new() -> Scope {
-    Scope {
-      variables: BTreeMap::new(),
-    }
-  }
-
-  pub fn get(&self, symbol: &str) -> Option<Expr> {
-    self.variables.get(symbol).cloned()
-  }
-
-  pub fn set(&mut self, symbol: String, expr: Expr) {
-    self.variables.insert(symbol, expr);
-  }
 }
