@@ -1,5 +1,3 @@
-use std::rc::Rc;
-
 use thiserror::Error;
 
 use crate::ast::{Atom, Expr, Function, List, Native, Operator};
@@ -11,7 +9,7 @@ pub fn eval(expr: Expr) -> Result<Expr, EvalError> {
 }
 
 pub struct Evaluator {
-  frame: Rc<Frame>,
+  frame: Frame,
 }
 
 impl Evaluator {
@@ -51,26 +49,26 @@ impl Evaluator {
       _ => return Err(NotCallable),
     };
 
-    if tail.len() != function.parameters.len() {
+    if tail.len() != function.parameters().len() {
       return Err(WrongArity);
     }
 
     let original_frame = self.frame.clone();
-    self.frame = Frame::with_parent(function.frame.clone());
+    self.frame = Frame::with_parent(function.frame().clone());
 
     function
-      .parameters
+      .parameters()
       .into_iter()
       .zip(tail.into_iter())
       .map(|(symbol, expr)| {
         self.eval_call_define(List::cons(
-          Expr::Atom(Symbol(symbol)),
+          Expr::Atom(Symbol(symbol.clone())),
           List::cons(expr, Nil),
         ))
       })
       .collect::<Result<Vec<Expr>, EvalError>>()?;
 
-    let expr = self.eval_expr(function.body)?;
+    let expr = self.eval_expr(function.body().clone())?;
 
     self.frame = original_frame;
 
@@ -118,7 +116,7 @@ impl Evaluator {
     let symbol = self.as_symbol(tail.get(0).unwrap().clone())?;
     let expr = self.eval_expr(tail.get(1).unwrap().clone())?;
 
-    self.frame = self.frame.set(symbol, expr.clone());
+    self.frame.set(symbol, expr.clone());
 
     Ok(expr)
   }
@@ -140,11 +138,9 @@ impl Evaluator {
 
     let frame = self.frame.clone();
 
-    Ok(Expr::Atom(Atom::Function(Box::new(Function {
-      frame,
-      parameters,
-      body,
-    }))))
+    Ok(Expr::Atom(Atom::Function(Function::new(
+      frame, parameters, body,
+    ))))
   }
 
   pub fn eval_call_quote(&mut self, tail: List) -> Result<Expr, EvalError> {
