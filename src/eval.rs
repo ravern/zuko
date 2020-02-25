@@ -1,6 +1,9 @@
+use std::rc::Rc;
+
 use thiserror::Error;
 
-use crate::ast::{Atom, Expr, Function, List, Native, Operator, Scope};
+use crate::ast::{Atom, Expr, Function, List, Native, Operator};
+use crate::env::Frame;
 
 pub fn eval(expr: Expr) -> Result<Expr, EvalError> {
   let mut evalutor = Evaluator::new();
@@ -8,13 +11,13 @@ pub fn eval(expr: Expr) -> Result<Expr, EvalError> {
 }
 
 pub struct Evaluator {
-  scopes: Vec<Scope>,
+  frame: Rc<Frame>,
 }
 
 impl Evaluator {
   pub fn new() -> Evaluator {
     Evaluator {
-      scopes: vec![Scope::new()],
+      frame: Frame::new(),
     }
   }
 
@@ -52,7 +55,8 @@ impl Evaluator {
       return Err(WrongArity);
     }
 
-    self.scopes.push(function.scope.clone());
+    let original_frame = self.frame.clone();
+    self.frame = Frame::with_parent(function.frame.clone());
 
     function
       .parameters
@@ -68,7 +72,7 @@ impl Evaluator {
 
     let expr = self.eval_expr(function.body)?;
 
-    self.scopes.pop();
+    self.frame = original_frame;
 
     Ok(expr)
   }
@@ -114,7 +118,7 @@ impl Evaluator {
     let symbol = self.as_symbol(tail.get(0).unwrap().clone())?;
     let expr = self.eval_expr(tail.get(1).unwrap().clone())?;
 
-    self.scopes.last_mut().unwrap().set(symbol, expr.clone());
+    self.frame = self.frame.set(symbol, expr.clone());
 
     Ok(expr)
   }
@@ -134,10 +138,10 @@ impl Evaluator {
       .map(|expr| self.as_symbol(expr))
       .collect::<Result<Vec<String>, EvalError>>()?;
 
-    let scope = self.scopes.last().unwrap().clone();
+    let frame = self.frame.clone();
 
     Ok(Expr::Atom(Atom::Function(Box::new(Function {
-      scope,
+      frame,
       parameters,
       body,
     }))))
@@ -201,13 +205,10 @@ impl Evaluator {
       return Ok(expr);
     }
 
-    for scope in self.scopes.iter() {
-      if let Some(expr) = scope.get(&symbol) {
-        return Ok(expr.clone());
-      }
+    match self.frame.get(&symbol) {
+      Some(expr) => Ok(expr.clone()),
+      None => Err(UndefinedSymbol(symbol)),
     }
-
-    Err(UndefinedSymbol(symbol))
   }
 
   pub fn eval_special_symbol(&mut self, symbol: &str) -> Option<Expr> {

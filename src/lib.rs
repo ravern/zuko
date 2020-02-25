@@ -8,6 +8,7 @@ use crate::eval::{EvalError, Evaluator};
 use crate::read::ReadError;
 
 mod ast;
+mod env;
 mod eval;
 mod read;
 
