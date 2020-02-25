@@ -4,7 +4,7 @@ use rustyline::Editor;
 use thiserror::Error;
 
 use crate::ast::Expr;
-use crate::eval::EvalError;
+use crate::eval::{EvalError, Evaluator};
 use crate::read::ReadError;
 
 mod ast;
@@ -17,9 +17,11 @@ pub fn run() -> Result<(), RunError> {
   let mut editor = Editor::<()>::new();
   editor.set_auto_add_history(true);
 
+  let mut evaluator = Evaluator::new();
+
   loop {
     match editor.readline("> ") {
-      Ok(line) => match run_line(&line) {
+      Ok(line) => match run_line(&mut evaluator, &line) {
         Ok(expr) => println!("{:?}", expr),
         Err(error) => println!("error: {}", error),
       },
@@ -33,9 +35,9 @@ pub fn run() -> Result<(), RunError> {
   Ok(())
 }
 
-fn run_line(line: &str) -> Result<Expr, RunError> {
+fn run_line(evaluator: &mut Evaluator, line: &str) -> Result<Expr, RunError> {
   let expr = read::read(line)?;
-  let expr = eval::eval(expr)?;
+  let expr = evaluator.eval_expr(expr)?;
   Ok(expr)
 }
 
