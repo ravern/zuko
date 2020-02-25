@@ -160,7 +160,6 @@ impl Evaluator {
     operator: Operator,
     tail: List,
   ) -> Result<Expr, EvalError> {
-    use EvalError::*;
     use Operator::*;
 
     if tail.len() != 2 {
@@ -181,7 +180,6 @@ impl Evaluator {
       Sub => left - right,
       Mul => left * right,
       Div => left / right,
-      _ => return Err(NotCallable),
     };
 
     Ok(Expr::Atom(Atom::Number(result)))
