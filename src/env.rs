@@ -1,43 +1,53 @@
+use std::cell::RefCell;
 use std::collections::BTreeMap;
 use std::rc::Rc;
 
 use crate::ast::Expr;
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct Frame {
-  parent: Option<Rc<Frame>>,
+  inner: Rc<RefCell<FrameInner>>,
+}
+
+#[derive(Debug)]
+struct FrameInner {
+  parent: Option<Frame>,
   variables: BTreeMap<String, Expr>,
 }
 
 impl Frame {
-  pub fn new() -> Rc<Frame> {
-    Rc::new(Frame {
-      parent: None,
-      variables: BTreeMap::new(),
-    })
-  }
-
-  pub fn with_parent(parent: Rc<Frame>) -> Rc<Frame> {
-    Rc::new(Frame {
-      parent: Some(parent),
-      variables: BTreeMap::new(),
-    })
-  }
-
-  pub fn get(&self, symbol: &str) -> Option<Expr> {
-    if let Some(expr) = self.variables.get(symbol) {
-      Some(expr.clone())
-    } else {
-      self.parent.as_ref().and_then(|parent| parent.get(symbol))
+  pub fn new() -> Frame {
+    Frame {
+      inner: Rc::new(RefCell::new(FrameInner {
+        parent: None,
+        variables: BTreeMap::new(),
+      })),
     }
   }
 
-  pub fn set(&self, symbol: String, expr: Expr) -> Rc<Frame> {
-    let parent = self.parent.clone();
+  pub fn with_parent(parent: Frame) -> Frame {
+    Frame {
+      inner: Rc::new(RefCell::new(FrameInner {
+        parent: Some(parent),
+        variables: BTreeMap::new(),
+      })),
+    }
+  }
 
-    let mut variables = self.variables.clone();
-    variables.insert(symbol, expr);
+  pub fn get(&self, symbol: &str) -> Option<Expr> {
+    if let Some(expr) = self.inner.borrow().variables.get(symbol) {
+      Some(expr.clone())
+    } else {
+      self
+        .inner
+        .borrow()
+        .parent
+        .as_ref()
+        .and_then(|parent| parent.get(symbol))
+    }
+  }
 
-    Rc::new(Frame { parent, variables })
+  pub fn set(&mut self, symbol: String, expr: Expr) {
+    self.inner.borrow_mut().variables.insert(symbol, expr);
   }
 }
