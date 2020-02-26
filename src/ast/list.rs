@@ -52,6 +52,18 @@ impl List {
   }
 }
 
+impl PartialEq for List {
+  fn eq(&self, other: &List) -> bool {
+    use List::*;
+
+    match (self, other) {
+      (Cons(left), Cons(right)) => Rc::ptr_eq(&left, &right),
+      (Nil, Nil) => true,
+      _ => false,
+    }
+  }
+}
+
 pub struct IntoIter(List);
 
 impl Iterator for IntoIter {

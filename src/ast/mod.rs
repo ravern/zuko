@@ -7,13 +7,23 @@ pub use self::list::{List, Node};
 
 pub mod list;
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub enum Expr {
   List(List),
   Atom(Atom),
 }
 
-#[derive(Clone, Debug)]
+impl Expr {
+  pub fn is_truthy(&self) -> bool {
+    if let Expr::List(List::Nil) = self {
+      false
+    } else {
+      true
+    }
+  }
+}
+
+#[derive(Clone, Debug, PartialEq)]
 pub enum Atom {
   Number(f64),
   Symbol(String),
@@ -57,6 +67,12 @@ impl Function {
   }
 }
 
+impl PartialEq for Function {
+  fn eq(&self, other: &Function) -> bool {
+    Rc::ptr_eq(&self.inner, &other.inner)
+  }
+}
+
 impl fmt::Debug for Function {
   fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
     write!(
@@ -67,19 +83,21 @@ impl fmt::Debug for Function {
   }
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub enum Native {
   Begin,
   Define,
   Function,
+  If,
   Quote,
   Operator(Operator),
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub enum Operator {
   Add,
   Sub,
   Mul,
   Div,
+  Eq,
 }
