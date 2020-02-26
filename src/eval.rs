@@ -1,6 +1,6 @@
 use thiserror::Error;
 
-use crate::ast::{Atom, Expr, Function, List, Native, Operator};
+use crate::ast::{self, Atom, Expr, Function, List, Native, Operator};
 use crate::env::Frame;
 
 pub fn eval(expr: Expr) -> Result<Expr, EvalError> {
@@ -53,20 +53,23 @@ impl Evaluator {
       return Err(WrongArity);
     }
 
+    let arguments = tail
+      .into_iter()
+      .map(|expr| self.eval_expr(expr))
+      .collect::<Result<Vec<Expr>, EvalError>>()?;
+
     let original_frame = self.frame.clone();
     self.frame = Frame::with_parent(function.frame().clone());
 
-    function
+    let arguments: Vec<(&std::string::String, Expr)> = function
       .parameters()
       .into_iter()
-      .zip(tail.into_iter())
-      .map(|(symbol, expr)| {
-        self.eval_call_define(List::cons(
-          Expr::Atom(Symbol(symbol.clone())),
-          List::cons(expr, Nil),
-        ))
-      })
-      .collect::<Result<Vec<Expr>, EvalError>>()?;
+      .zip(arguments.into_iter())
+      .collect();
+
+    for (name, argument) in arguments {
+      self.frame.set(name.clone(), argument);
+    }
 
     let expr = self.eval_expr(function.body().clone())?;
 
@@ -86,6 +89,7 @@ impl Evaluator {
       Begin => self.eval_call_begin(tail),
       Define => self.eval_call_define(tail),
       Function => self.eval_call_function(tail),
+      If => self.eval_call_if(tail),
       Quote => self.eval_call_quote(tail),
       Operator(operator) => self.eval_call_operator(operator, tail),
     }
@@ -143,6 +147,22 @@ impl Evaluator {
     ))))
   }
 
+  pub fn eval_call_if(&mut self, tail: List) -> Result<Expr, EvalError> {
+    use EvalError::*;
+
+    if tail.len() != 3 {
+      return Err(WrongArity);
+    }
+
+    let condition = self.eval_expr(tail.get(0).unwrap().clone())?;
+
+    if condition.is_truthy() {
+      self.eval_expr(tail.get(1).unwrap().clone())
+    } else {
+      self.eval_expr(tail.get(2).unwrap().clone())
+    }
+  }
+
   pub fn eval_call_quote(&mut self, tail: List) -> Result<Expr, EvalError> {
     use EvalError::*;
 
@@ -160,10 +180,14 @@ impl Evaluator {
     operator: Operator,
     tail: List,
   ) -> Result<Expr, EvalError> {
+    use ast::Atom::*;
+    use ast::List::*;
+    use EvalError::*;
+    use Expr::*;
     use Operator::*;
 
     if tail.len() != 2 {
-      return Ok(Expr::Atom(Atom::Number(0.0)));
+      return Err(WrongArity);
     }
 
     let left = tail.get(0).unwrap().clone();
@@ -176,13 +200,20 @@ impl Evaluator {
     let right = self.as_number(right)?;
 
     let result = match operator {
-      Add => left + right,
-      Sub => left - right,
-      Mul => left * right,
-      Div => left / right,
+      Add => Atom(Number(left + right)),
+      Sub => Atom(Number(left - right)),
+      Mul => Atom(Number(left * right)),
+      Div => Atom(Number(left / right)),
+      Eq => {
+        if left == right {
+          Atom(Symbol("true".to_string()))
+        } else {
+          List(Nil)
+        }
+      }
     };
 
-    Ok(Expr::Atom(Atom::Number(result)))
+    Ok(result)
   }
 
   pub fn eval_atom(&mut self, atom: Atom) -> Result<Expr, EvalError> {
@@ -208,18 +239,20 @@ impl Evaluator {
   }
 
   pub fn eval_special_symbol(&mut self, symbol: &str) -> Option<Expr> {
-    use Native::{Begin, Define, Function, Quote};
-    use Operator::*;
+    use ast::Operator::*;
+    use Native::*;
 
     let native = match symbol {
       "begin" => Begin,
       "define" => Define,
       "function" => Function,
+      "if" => If,
       "quote" => Quote,
-      "+" => Native::Operator(Add),
-      "-" => Native::Operator(Sub),
-      "*" => Native::Operator(Mul),
-      "/" => Native::Operator(Div),
+      "+" => Operator(Add),
+      "-" => Operator(Sub),
+      "*" => Operator(Mul),
+      "/" => Operator(Div),
+      "=" => Operator(Eq),
       _ => return None,
     };
 

@@ -163,6 +163,7 @@ where
       Some('-') => "-",
       Some('*') => "*",
       Some('/') => "/",
+      Some('=') => "=",
       Some(char) => return Err(UnexpectedChar(*char)),
       None => return Err(UnexpectedEndOfInput),
     };
@@ -228,7 +229,7 @@ fn is_symbol(char: char) -> bool {
 
 fn is_operator(char: char) -> bool {
   match char {
-    '+' | '-' | '*' | '/' => true,
+    '+' | '-' | '*' | '/' | '=' => true,
     _ => false,
   }
 }
