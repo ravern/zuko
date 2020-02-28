@@ -1,5 +1,8 @@
 use std::fmt;
 use std::rc::Rc;
+use std::sync::{Arc, Mutex};
+
+use lazy_static::lazy_static;
 
 use crate::env::Frame;
 
@@ -32,16 +35,37 @@ pub enum Atom {
   Native(Native),
 }
 
+lazy_static! {
+  static ref SYMBOLS: Mutex<Vec<Symbol>> = Mutex::new(Vec::new());
+  pub static ref SYMBOL_TRUE: Symbol = Symbol::new("true");
+}
+
 #[derive(Clone, Debug, Eq, Ord, PartialEq, PartialOrd)]
 pub struct Symbol {
-  inner: Rc<String>,
+  inner: Arc<String>,
 }
 
 impl Symbol {
-  pub fn new(symbol: String) -> Symbol {
-    Symbol {
-      inner: Rc::new(symbol),
+  pub fn new<S>(symbol: S) -> Symbol
+  where
+    S: Into<String>,
+  {
+    let symbol = symbol.into();
+
+    if let Some(symbol) = SYMBOLS
+      .lock()
+      .unwrap()
+      .iter()
+      .find(|s| s.inner.as_ref() == &symbol)
+    {
+      return symbol.clone();
     }
+
+    let symbol = Symbol {
+      inner: Arc::new(symbol),
+    };
+    SYMBOLS.lock().unwrap().push(symbol.clone());
+    symbol
   }
 
   pub fn as_str(&self) -> &str {

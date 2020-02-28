@@ -1,5 +1,4 @@
 use std::iter::{Iterator, Peekable};
-use std::rc::Rc;
 
 use thiserror::Error;
 
@@ -233,8 +232,4 @@ fn is_operator(char: char) -> bool {
     '+' | '-' | '*' | '/' | '=' => true,
     _ => false,
   }
-}
-
-pub struct SymbolMap {
-  inner: Vec<Rc<String>>,
 }
