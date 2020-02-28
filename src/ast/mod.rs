@@ -26,10 +26,27 @@ impl Expr {
 #[derive(Clone, Debug, PartialEq)]
 pub enum Atom {
   Number(f64),
-  Symbol(String),
+  Symbol(Symbol),
   String(String),
   Function(Function),
   Native(Native),
+}
+
+#[derive(Clone, Debug, Eq, Ord, PartialEq, PartialOrd)]
+pub struct Symbol {
+  inner: Rc<String>,
+}
+
+impl Symbol {
+  pub fn new(symbol: String) -> Symbol {
+    Symbol {
+      inner: Rc::new(symbol),
+    }
+  }
+
+  pub fn as_str(&self) -> &str {
+    self.inner.as_ref()
+  }
 }
 
 #[derive(Clone)]
@@ -39,12 +56,12 @@ pub struct Function {
 
 pub struct FunctionInner {
   pub frame: Frame,
-  pub parameters: Vec<String>,
+  pub parameters: Vec<Symbol>,
   pub body: Expr,
 }
 
 impl Function {
-  pub fn new(frame: Frame, parameters: Vec<String>, body: Expr) -> Function {
+  pub fn new(frame: Frame, parameters: Vec<Symbol>, body: Expr) -> Function {
     Function {
       inner: Rc::new(FunctionInner {
         frame,
@@ -58,7 +75,7 @@ impl Function {
     &self.inner.frame
   }
 
-  pub fn parameters(&self) -> &[String] {
+  pub fn parameters(&self) -> &[Symbol] {
     &self.inner.parameters
   }
 
