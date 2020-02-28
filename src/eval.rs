@@ -1,6 +1,8 @@
 use thiserror::Error;
 
-use crate::ast::{self, Atom, Expr, Function, List, Native, Operator, Symbol};
+use crate::ast::{
+  self, Atom, Expr, Function, List, Native, Operator, Symbol, SYMBOL_TRUE,
+};
 use crate::env::Frame;
 
 pub fn eval(expr: Expr) -> Result<Expr, EvalError> {
@@ -206,7 +208,7 @@ impl Evaluator {
       Div => Atom(Number(left / right)),
       Eq => {
         if left == right {
-          Atom(Symbol(ast::Symbol::new("true".to_string())))
+          Atom(Symbol(SYMBOL_TRUE.clone()))
         } else {
           List(Nil)
         }
