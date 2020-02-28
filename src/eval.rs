@@ -1,6 +1,6 @@
 use thiserror::Error;
 
-use crate::ast::{self, Atom, Expr, Function, List, Native, Operator};
+use crate::ast::{self, Atom, Expr, Function, List, Native, Operator, Symbol};
 use crate::env::Frame;
 
 pub fn eval(expr: Expr) -> Result<Expr, EvalError> {
@@ -61,7 +61,7 @@ impl Evaluator {
     let original_frame = self.frame.clone();
     self.frame = Frame::with_parent(function.frame().clone());
 
-    let arguments: Vec<(&std::string::String, Expr)> = function
+    let arguments: Vec<(&ast::Symbol, Expr)> = function
       .parameters()
       .into_iter()
       .zip(arguments.into_iter())
@@ -138,7 +138,7 @@ impl Evaluator {
     let parameters = parameters
       .into_iter()
       .map(|expr| self.as_symbol(expr))
-      .collect::<Result<Vec<String>, EvalError>>()?;
+      .collect::<Result<Vec<Symbol>, EvalError>>()?;
 
     let frame = self.frame.clone();
 
@@ -206,7 +206,7 @@ impl Evaluator {
       Div => Atom(Number(left / right)),
       Eq => {
         if left == right {
-          Atom(Symbol("true".to_string()))
+          Atom(Symbol(ast::Symbol::new("true".to_string())))
         } else {
           List(Nil)
         }
@@ -225,10 +225,10 @@ impl Evaluator {
     }
   }
 
-  pub fn eval_symbol(&mut self, symbol: String) -> Result<Expr, EvalError> {
+  pub fn eval_symbol(&mut self, symbol: Symbol) -> Result<Expr, EvalError> {
     use EvalError::*;
 
-    if let Some(expr) = self.eval_special_symbol(&symbol) {
+    if let Some(expr) = self.eval_special_symbol(symbol.as_str()) {
       return Ok(expr);
     }
 
@@ -259,7 +259,7 @@ impl Evaluator {
     Some(Expr::Atom(Atom::Native(native)))
   }
 
-  fn as_symbol(&mut self, expr: Expr) -> Result<String, EvalError> {
+  fn as_symbol(&mut self, expr: Expr) -> Result<Symbol, EvalError> {
     use Atom::*;
     use EvalError::*;
 
@@ -296,8 +296,8 @@ pub enum EvalError {
   InvalidType,
   #[error("arity is wrong")]
   WrongArity,
-  #[error("'{0}' is undefined")]
-  UndefinedSymbol(String),
+  #[error("'{0:?}' is undefined")]
+  UndefinedSymbol(Symbol),
   #[error("expression not callable")]
   NotCallable,
 }

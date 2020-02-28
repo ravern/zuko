@@ -1,8 +1,9 @@
 use std::iter::{Iterator, Peekable};
+use std::rc::Rc;
 
 use thiserror::Error;
 
-use crate::ast::{Atom, Expr, List};
+use crate::ast::{Atom, Expr, List, Symbol};
 
 pub fn read(source: &str) -> Result<Expr, ReadError> {
   let mut reader = Reader::new(source.chars());
@@ -127,7 +128,7 @@ where
     Ok(number)
   }
 
-  pub fn read_symbol(&mut self) -> Result<String, ReadError> {
+  pub fn read_symbol(&mut self) -> Result<Symbol, ReadError> {
     use ReadError::*;
 
     let mut buf = Vec::new();
@@ -152,10 +153,10 @@ where
 
     let buf: String = buf.into_iter().collect();
 
-    Ok(buf)
+    Ok(Symbol::new(buf))
   }
 
-  pub fn read_operator_symbol(&mut self) -> Result<String, ReadError> {
+  pub fn read_operator_symbol(&mut self) -> Result<Symbol, ReadError> {
     use ReadError::*;
 
     let operator = match self.source.peek() {
@@ -169,7 +170,7 @@ where
     };
     self.source.next();
 
-    Ok(operator.to_string())
+    Ok(Symbol::new(operator.to_string()))
   }
 
   pub fn read_string(&mut self) -> Result<String, ReadError> {
@@ -232,4 +233,8 @@ fn is_operator(char: char) -> bool {
     '+' | '-' | '*' | '/' | '=' => true,
     _ => false,
   }
+}
+
+pub struct SymbolMap {
+  inner: Vec<Rc<String>>,
 }
