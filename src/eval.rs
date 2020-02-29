@@ -89,6 +89,7 @@ impl Evaluator {
 
     match native {
       Begin => self.eval_call_begin(tail),
+      Debug => self.eval_call_debug(tail),
       Define => self.eval_call_define(tail),
       Function => self.eval_call_function(tail),
       If => self.eval_call_if(tail),
@@ -110,6 +111,20 @@ impl Evaluator {
       .collect::<Result<Vec<Expr>, EvalError>>()?;
 
     Ok(tail.pop().unwrap())
+  }
+
+  pub fn eval_call_debug(&mut self, tail: List) -> Result<Expr, EvalError> {
+    use EvalError::*;
+
+    if tail.len() != 1 {
+      return Err(WrongArity);
+    }
+
+    let expr = self.eval_expr(tail.get(0).unwrap().clone())?;
+
+    println!("{:?}", expr);
+
+    Ok(expr)
   }
 
   pub fn eval_call_define(&mut self, tail: List) -> Result<Expr, EvalError> {
@@ -230,7 +245,7 @@ impl Evaluator {
   pub fn eval_symbol(&mut self, symbol: Symbol) -> Result<Expr, EvalError> {
     use EvalError::*;
 
-    if let Some(expr) = self.eval_special_symbol(symbol.as_str()) {
+    if let Some(expr) = self.eval_special_symbol(&symbol) {
       return Ok(expr);
     }
 
@@ -240,12 +255,13 @@ impl Evaluator {
     }
   }
 
-  pub fn eval_special_symbol(&mut self, symbol: &str) -> Option<Expr> {
+  pub fn eval_special_symbol(&mut self, symbol: &Symbol) -> Option<Expr> {
     use ast::Operator::*;
     use Native::*;
 
-    let native = match symbol {
+    let native = match symbol.as_str() {
       "begin" => Begin,
+      "debug" => Debug,
       "define" => Define,
       "function" => Function,
       "if" => If,
