@@ -127,6 +127,7 @@ impl fmt::Debug for Function {
 #[derive(Clone, Debug, PartialEq)]
 pub enum Native {
   Begin,
+  Debug,
   Define,
   Function,
   If,

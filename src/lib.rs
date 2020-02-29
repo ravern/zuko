@@ -1,3 +1,5 @@
+use std::{fs, io};
+
 use rustyline::config::Configurer;
 use rustyline::error::ReadlineError;
 use rustyline::Editor;
@@ -13,6 +15,25 @@ mod eval;
 mod read;
 
 pub fn run() -> Result<(), RunError> {
+  let args: Vec<String> = std::env::args().collect();
+
+  if let Some(path) = args.get(1) {
+    run_file(path)
+  } else {
+    run_repl()
+  }
+}
+
+pub fn run_file(path: &str) -> Result<(), RunError> {
+  let source = fs::read_to_string(path)?;
+
+  let expr = read::read(&source)?;
+  eval::eval(expr)?;
+
+  Ok(())
+}
+
+pub fn run_repl() -> Result<(), RunError> {
   println!("Yu v0.1.0");
 
   let mut editor = Editor::<()>::new();
@@ -22,7 +43,7 @@ pub fn run() -> Result<(), RunError> {
 
   loop {
     match editor.readline("> ") {
-      Ok(line) => match run_line(&mut evaluator, &line) {
+      Ok(line) => match read_and_eval_line(&mut evaluator, &line) {
         Ok(expr) => println!("{:?}", expr),
         Err(error) => println!("error: {}", error),
       },
@@ -36,7 +57,10 @@ pub fn run() -> Result<(), RunError> {
   Ok(())
 }
 
-fn run_line(evaluator: &mut Evaluator, line: &str) -> Result<Expr, RunError> {
+fn read_and_eval_line(
+  evaluator: &mut Evaluator,
+  line: &str,
+) -> Result<Expr, RunError> {
   let expr = read::read(line)?;
   let expr = evaluator.eval_expr(expr)?;
   Ok(expr)
@@ -44,6 +68,8 @@ fn run_line(evaluator: &mut Evaluator, line: &str) -> Result<Expr, RunError> {
 
 #[derive(Debug, Error)]
 pub enum RunError {
+  #[error("{0}")]
+  Io(#[from] io::Error),
   #[error("{0}")]
   Read(#[from] ReadError),
   #[error("{0}")]
