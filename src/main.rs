@@ -1,6 +1,6 @@
 use std::process;
 
-use yu::run;
+use zuko::run;
 
 fn main() {
   if let Err(error) = run() {
