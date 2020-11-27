@@ -245,7 +245,7 @@ impl Evaluator {
   pub fn eval_symbol(&mut self, symbol: Symbol) -> Result<Expr, EvalError> {
     use EvalError::*;
 
-    if let Some(expr) = self.eval_special_symbol(&symbol) {
+    if let Some(expr) = self.eval_native_symbol(&symbol) {
       return Ok(expr);
     }
 
@@ -255,7 +255,7 @@ impl Evaluator {
     }
   }
 
-  pub fn eval_special_symbol(&mut self, symbol: &Symbol) -> Option<Expr> {
+  pub fn eval_native_symbol(&mut self, symbol: &Symbol) -> Option<Expr> {
     use ast::Operator::*;
     use Native::*;
 
