@@ -1,9 +1,12 @@
+use std::{fs, io};
+
 use thiserror::Error;
 
 use crate::ast::{
   self, Atom, Expr, Function, List, Native, Operator, Symbol, SYMBOL_TRUE,
 };
 use crate::env::Frame;
+use crate::read;
 
 pub fn eval(expr: Expr) -> Result<Expr, EvalError> {
   let mut evalutor = Evaluator::new();
@@ -92,6 +95,7 @@ impl Evaluator {
       Debug => self.eval_call_debug(tail),
       Define => self.eval_call_define(tail),
       Function => self.eval_call_function(tail),
+      Import => self.eval_call_import(tail),
       If => self.eval_call_if(tail),
       Quote => self.eval_call_quote(tail),
       Operator(operator) => self.eval_call_operator(operator, tail),
@@ -162,6 +166,21 @@ impl Evaluator {
     Ok(Expr::Atom(Atom::Function(Function::new(
       frame, parameters, body,
     ))))
+  }
+
+  pub fn eval_call_import(&mut self, tail: List) -> Result<Expr, EvalError> {
+    use EvalError::*;
+
+    if tail.len() != 1 {
+      return Err(WrongArity);
+    }
+
+    let path = self.as_string(tail.get(0).unwrap().clone())?;
+
+    let source = fs::read_to_string(path.as_str())?;
+
+    let expr = read::read(&source)?;
+    self.eval_expr(expr)
   }
 
   pub fn eval_call_if(&mut self, tail: List) -> Result<Expr, EvalError> {
@@ -264,6 +283,7 @@ impl Evaluator {
       "debug" => Debug,
       "define" => Define,
       "function" => Function,
+      "import" => Import,
       "if" => If,
       "quote" => Quote,
       "+" => Operator(Add),
@@ -283,6 +303,16 @@ impl Evaluator {
 
     match expr {
       Expr::Atom(Symbol(symbol)) => Ok(symbol),
+      _ => Err(InvalidType),
+    }
+  }
+
+  fn as_string(&mut self, expr: Expr) -> Result<String, EvalError> {
+    use Atom::*;
+    use EvalError::*;
+
+    match expr {
+      Expr::Atom(String(string)) => Ok(string),
       _ => Err(InvalidType),
     }
   }
@@ -310,6 +340,10 @@ impl Evaluator {
 
 #[derive(Debug, Error)]
 pub enum EvalError {
+  #[error("{0}")]
+  Io(#[from] io::Error),
+  #[error("{0}")]
+  Read(#[from] read::ReadError),
   #[error("type is invalid")]
   InvalidType,
   #[error("arity is wrong")]

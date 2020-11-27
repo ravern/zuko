@@ -130,6 +130,7 @@ pub enum Native {
   Debug,
   Define,
   Function,
+  Import,
   If,
   Quote,
   Operator(Operator),
