@@ -9,10 +9,11 @@ use crate::ast::Expr;
 use crate::eval::{EvalError, Evaluator};
 use crate::read::ReadError;
 
-mod ast;
 mod env;
-mod eval;
-mod read;
+
+pub mod ast;
+pub mod eval;
+pub mod read;
 
 pub fn run() -> Result<(), RunError> {
   let args: Vec<String> = std::env::args().collect();
@@ -24,7 +25,7 @@ pub fn run() -> Result<(), RunError> {
   }
 }
 
-pub fn run_file(path: &str) -> Result<(), RunError> {
+fn run_file(path: &str) -> Result<(), RunError> {
   let source = fs::read_to_string(path)?;
 
   let expr = read::read(&source)?;
@@ -33,7 +34,7 @@ pub fn run_file(path: &str) -> Result<(), RunError> {
   Ok(())
 }
 
-pub fn run_repl() -> Result<(), RunError> {
+fn run_repl() -> Result<(), RunError> {
   println!("Zuko v0.1.0");
 
   let mut editor = Editor::<()>::new();

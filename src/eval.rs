@@ -126,7 +126,7 @@ impl Evaluator {
 
     let expr = self.eval_expr(tail.get(0).unwrap().clone())?;
 
-    println!("{:?}", expr);
+    println!("{}", expr);
 
     Ok(expr)
   }
@@ -240,6 +240,7 @@ impl Evaluator {
       Sub => Atom(Number(left - right)),
       Mul => Atom(Number(left * right)),
       Div => Atom(Number(left / right)),
+      Mod => Atom(Number(left % right)),
       Eq => {
         if left == right {
           Atom(Symbol(SYMBOL_TRUE.clone()))
@@ -291,6 +292,7 @@ impl Evaluator {
       "-" => Operator(Sub),
       "*" => Operator(Mul),
       "/" => Operator(Div),
+      "%" => Operator(Mod),
       "=" => Operator(Eq),
       _ => return None,
     };
