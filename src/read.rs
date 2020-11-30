@@ -131,13 +131,13 @@ where
     use ReadError::*;
 
     let mut buf = Vec::new();
-    let mut prev_hyphen_dist = 0;
+    let mut prev_punct_dist = 0;
 
     loop {
       match self.source.peek() {
         Some(char) if char.is_alphabetic() && char.is_lowercase() => {}
-        Some('-') if prev_hyphen_dist > 0 => {
-          prev_hyphen_dist = -1;
+        Some('-') | Some('/') if prev_punct_dist > 0 => {
+          prev_punct_dist = -1;
         }
         Some(')') => break,
         Some(char) if char.is_whitespace() => break,
@@ -147,7 +147,12 @@ where
       let char = self.source.next().unwrap();
 
       buf.push(char);
-      prev_hyphen_dist += 1;
+      prev_punct_dist += 1;
+    }
+
+    let last_char = buf.last().cloned();
+    if let Some('-') | Some('/') = last_char {
+      return Err(UnexpectedChar(last_char.unwrap()));
     }
 
     let buf: String = buf.into_iter().collect();
