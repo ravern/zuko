@@ -286,6 +286,7 @@ impl Evaluator {
       "import" => Import,
       "if" => If,
       "quote" => Quote,
+      "true" => return Some(Expr::Atom(Atom::Symbol(SYMBOL_TRUE.clone()))),
       "+" => Operator(Add),
       "-" => Operator(Sub),
       "*" => Operator(Mul),
@@ -348,7 +349,7 @@ pub enum EvalError {
   InvalidType,
   #[error("arity is wrong")]
   WrongArity,
-  #[error("'{0:?}' is undefined")]
+  #[error("'{0}' is undefined")]
   UndefinedSymbol(Symbol),
   #[error("expression not callable")]
   NotCallable,

@@ -44,7 +44,7 @@ pub fn run_repl() -> Result<(), RunError> {
   loop {
     match editor.readline("> ") {
       Ok(line) => match read_and_eval_line(&mut evaluator, &line) {
-        Ok(expr) => println!("{:?}", expr),
+        Ok(expr) => println!("{}", expr),
         Err(error) => println!("error: {}", error),
       },
       Err(ReadlineError::Interrupted) => break,

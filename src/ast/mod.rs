@@ -26,6 +26,17 @@ impl Expr {
   }
 }
 
+impl fmt::Display for Expr {
+  fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+    use Expr::*;
+
+    match self {
+      List(list) => write!(f, "{}", list),
+      Atom(atom) => write!(f, "{}", atom),
+    }
+  }
+}
+
 #[derive(Clone, Debug, PartialEq)]
 pub enum Atom {
   Number(f64),
@@ -35,8 +46,25 @@ pub enum Atom {
   Native(Native),
 }
 
+impl fmt::Display for Atom {
+  fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+    use Atom::*;
+
+    match self {
+      Number(number) => write!(f, "{}", number),
+      Symbol(symbol) => write!(f, "{}", symbol),
+      String(string) => write!(f, "{}", string),
+      Function(function) => write!(f, "{}", function),
+      Native(native) => write!(f, "{}", native),
+    }
+  }
+}
+
 lazy_static! {
   static ref SYMBOLS: Mutex<Vec<Symbol>> = Mutex::new(Vec::new());
+}
+
+lazy_static! {
   pub static ref SYMBOL_TRUE: Symbol = Symbol::new("true");
 }
 
@@ -70,6 +98,12 @@ impl Symbol {
 
   pub fn as_str(&self) -> &str {
     self.inner.as_ref()
+  }
+}
+
+impl fmt::Display for Symbol {
+  fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+    write!(f, "{}", self.inner.as_str())
   }
 }
 
@@ -114,6 +148,12 @@ impl PartialEq for Function {
   }
 }
 
+impl fmt::Display for Function {
+  fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+    write!(f, "Function")
+  }
+}
+
 impl fmt::Debug for Function {
   fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
     write!(
@@ -134,6 +174,12 @@ pub enum Native {
   If,
   Quote,
   Operator(Operator),
+}
+
+impl fmt::Display for Native {
+  fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+    write!(f, "Native")
+  }
 }
 
 #[derive(Clone, Debug, PartialEq)]

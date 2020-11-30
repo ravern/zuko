@@ -1,3 +1,4 @@
+use std::fmt;
 use std::iter::Iterator;
 use std::rc::Rc;
 
@@ -61,6 +62,27 @@ impl PartialEq for List {
       (Nil, Nil) => true,
       _ => false,
     }
+  }
+}
+
+impl fmt::Display for List {
+  fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+    use List::*;
+
+    if let Nil = self {
+      return write!(f, "()");
+    }
+
+    write!(
+      f,
+      "({})",
+      self
+        .clone()
+        .into_iter()
+        .map(|expr| format!("{}", expr))
+        .collect::<Vec<String>>()
+        .join(" ")
+    )
   }
 }
 
