@@ -2,7 +2,7 @@ use std::iter::{Iterator, Peekable};
 
 use thiserror::Error;
 
-use crate::ast::{Atom, Expr, List, Symbol};
+use crate::ast::{Atom, Expr, List, Operator, Special, Symbol};
 
 pub fn read(source: &str) -> Result<Expr, ReadError> {
   let mut reader = Reader::new(source.chars());
@@ -92,8 +92,8 @@ where
     let atom = match self.source.peek() {
       Some('"') => String(self.read_string()?),
       Some(char) if char.is_digit(10) => Number(self.read_number()?),
-      Some(char) if is_symbol(*char) => Symbol(self.read_symbol()?),
       Some(char) if is_operator(*char) => Symbol(self.read_operator_symbol()?),
+      Some(char) if is_symbol(*char) => self.read_symbol_or_special()?,
       Some(char) => return Err(UnexpectedChar(*char)),
       None => return Err(UnexpectedEndOfInput),
     };
@@ -125,6 +125,33 @@ where
     let number = buf.parse().unwrap();
 
     Ok(number)
+  }
+
+  pub fn read_symbol_or_special(&mut self) -> Result<Atom, ReadError> {
+    use self::Operator::*;
+    use Special::*;
+
+    let symbol = self.read_symbol()?;
+
+    let special = match symbol.as_str() {
+      "begin" => Begin,
+      "debug" => Debug,
+      "define" => Define,
+      "function" => Function,
+      "macro" => Macro,
+      "import" => Import,
+      "if" => If,
+      "quote" => Quote,
+      "+" => Operator(Add),
+      "-" => Operator(Sub),
+      "*" => Operator(Mul),
+      "/" => Operator(Div),
+      "%" => Operator(Mod),
+      "=" => Operator(Eq),
+      _ => return Ok(Atom::Symbol(symbol)),
+    };
+
+    Ok(Atom::Special(special))
   }
 
   pub fn read_symbol(&mut self) -> Result<Symbol, ReadError> {

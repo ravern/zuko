@@ -51,10 +51,10 @@ impl Evaluator {
 
     let function = match head {
       Expr::Atom(Function(function)) => function,
+      Expr::Atom(Macro(macr)) => return self.eval_call_macro(macr, tail),
       Expr::Atom(Special(special)) => {
         return self.eval_call_special(special, tail)
       }
-      Expr::Atom(Macro(macr)) => return self.eval_call_macro(macr, tail),
       _ => return Err(NotCallable),
     };
 
@@ -121,19 +121,22 @@ impl Evaluator {
     use Special::*;
 
     match special {
-      Begin => self.eval_call_begin(tail),
-      Debug => self.eval_call_debug(tail),
-      Define => self.eval_call_define(tail),
-      Function => self.eval_call_function(tail),
+      Begin => self.eval_call_special_begin(tail),
+      Debug => self.eval_call_special_debug(tail),
+      Define => self.eval_call_special_define(tail),
+      Function => self.eval_call_special_function(tail),
       Macro => self.eval_call_special_macro(tail),
-      Import => self.eval_call_import(tail),
-      If => self.eval_call_if(tail),
-      Quote => self.eval_call_quote(tail),
-      Operator(operator) => self.eval_call_operator(operator, tail),
+      Import => self.eval_call_special_import(tail),
+      If => self.eval_call_special_if(tail),
+      Quote => self.eval_call_special_quote(tail),
+      Operator(operator) => self.eval_call_special_operator(operator, tail),
     }
   }
 
-  pub fn eval_call_begin(&mut self, tail: List) -> Result<Expr, EvalError> {
+  pub fn eval_call_special_begin(
+    &mut self,
+    tail: List,
+  ) -> Result<Expr, EvalError> {
     use EvalError::*;
 
     if tail.len() < 1 {
@@ -148,7 +151,10 @@ impl Evaluator {
     Ok(tail.pop().unwrap())
   }
 
-  pub fn eval_call_debug(&mut self, tail: List) -> Result<Expr, EvalError> {
+  pub fn eval_call_special_debug(
+    &mut self,
+    tail: List,
+  ) -> Result<Expr, EvalError> {
     use EvalError::*;
 
     if tail.len() != 1 {
@@ -162,7 +168,10 @@ impl Evaluator {
     Ok(expr)
   }
 
-  pub fn eval_call_define(&mut self, tail: List) -> Result<Expr, EvalError> {
+  pub fn eval_call_special_define(
+    &mut self,
+    tail: List,
+  ) -> Result<Expr, EvalError> {
     use EvalError::*;
 
     if tail.len() != 2 {
@@ -177,7 +186,10 @@ impl Evaluator {
     Ok(expr)
   }
 
-  pub fn eval_call_function(&mut self, tail: List) -> Result<Expr, EvalError> {
+  pub fn eval_call_special_function(
+    &mut self,
+    tail: List,
+  ) -> Result<Expr, EvalError> {
     use EvalError::*;
 
     if tail.len() != 2 {
@@ -221,7 +233,10 @@ impl Evaluator {
     Ok(Expr::Atom(Atom::Macro(Macro::new(parameter, body))))
   }
 
-  pub fn eval_call_import(&mut self, tail: List) -> Result<Expr, EvalError> {
+  pub fn eval_call_special_import(
+    &mut self,
+    tail: List,
+  ) -> Result<Expr, EvalError> {
     use EvalError::*;
 
     if tail.len() != 1 {
@@ -236,7 +251,10 @@ impl Evaluator {
     self.eval_expr(expr)
   }
 
-  pub fn eval_call_if(&mut self, tail: List) -> Result<Expr, EvalError> {
+  pub fn eval_call_special_if(
+    &mut self,
+    tail: List,
+  ) -> Result<Expr, EvalError> {
     use EvalError::*;
 
     if tail.len() != 3 {
@@ -252,7 +270,10 @@ impl Evaluator {
     }
   }
 
-  pub fn eval_call_quote(&mut self, tail: List) -> Result<Expr, EvalError> {
+  pub fn eval_call_special_quote(
+    &mut self,
+    tail: List,
+  ) -> Result<Expr, EvalError> {
     use EvalError::*;
 
     if tail.len() != 1 {
@@ -264,7 +285,7 @@ impl Evaluator {
     Ok(expr)
   }
 
-  pub fn eval_call_operator(
+  pub fn eval_call_special_operator(
     &mut self,
     operator: Operator,
     tail: List,
@@ -318,40 +339,10 @@ impl Evaluator {
   pub fn eval_symbol(&mut self, symbol: Symbol) -> Result<Expr, EvalError> {
     use EvalError::*;
 
-    if let Some(expr) = self.eval_special_symbol(&symbol) {
-      return Ok(expr);
-    }
-
     match self.frame.get(&symbol) {
       Some(expr) => Ok(expr.clone()),
       None => Err(UndefinedSymbol(symbol)),
     }
-  }
-
-  pub fn eval_special_symbol(&mut self, symbol: &Symbol) -> Option<Expr> {
-    use ast::Operator::*;
-    use Special::*;
-
-    let special = match symbol.as_str() {
-      "begin" => Begin,
-      "debug" => Debug,
-      "define" => Define,
-      "function" => Function,
-      "macro" => Macro,
-      "import" => Import,
-      "if" => If,
-      "quote" => Quote,
-      "true" => return Some(Expr::Atom(Atom::Symbol(SYMBOL_TRUE.clone()))),
-      "+" => Operator(Add),
-      "-" => Operator(Sub),
-      "*" => Operator(Mul),
-      "/" => Operator(Div),
-      "%" => Operator(Mod),
-      "=" => Operator(Eq),
-      _ => return None,
-    };
-
-    Some(Expr::Atom(Atom::Special(special)))
   }
 
   fn as_symbol(&mut self, expr: Expr) -> Result<Symbol, EvalError> {
