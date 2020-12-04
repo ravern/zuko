@@ -2,7 +2,7 @@ use std::iter::{Iterator, Peekable};
 
 use thiserror::Error;
 
-use crate::ast::{Atom, Expr, List, Operator, Special, Symbol};
+use crate::ast::{self, Atom, Expr, List, Special, Symbol};
 
 pub fn read(source: &str) -> Result<Expr, ReadError> {
   let mut reader = Reader::new(source.chars());
@@ -128,7 +128,7 @@ where
   }
 
   pub fn read_symbol_or_special(&mut self) -> Result<Atom, ReadError> {
-    use self::Operator::*;
+    use ast::Operator::*;
     use Special::*;
 
     let symbol = self.read_symbol()?;
