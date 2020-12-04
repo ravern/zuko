@@ -2,7 +2,7 @@ use std::iter::{Iterator, Peekable};
 
 use thiserror::Error;
 
-use crate::ast::{self, Atom, Expr, List, Special, Symbol};
+use crate::ast::{self, Atom, Expr, List, Operator, Special, Symbol};
 
 pub fn read(source: &str) -> Result<Expr, ReadError> {
   let mut reader = Reader::new(source.chars());
@@ -86,13 +86,16 @@ where
   }
 
   pub fn read_atom(&mut self) -> Result<Atom, ReadError> {
+    use ast::Special::Operator;
     use Atom::*;
     use ReadError::*;
 
     let atom = match self.source.peek() {
       Some('"') => String(self.read_string()?),
       Some(char) if char.is_digit(10) => Number(self.read_number()?),
-      Some(char) if is_operator(*char) => Symbol(self.read_operator_symbol()?),
+      Some(char) if is_operator(*char) => {
+        Special(Operator(self.read_operator()?))
+      }
       Some(char) if is_symbol(*char) => self.read_symbol_or_special()?,
       Some(char) => return Err(UnexpectedChar(*char)),
       None => return Err(UnexpectedEndOfInput),
@@ -128,7 +131,6 @@ where
   }
 
   pub fn read_symbol_or_special(&mut self) -> Result<Atom, ReadError> {
-    use ast::Operator::*;
     use Special::*;
 
     let symbol = self.read_symbol()?;
@@ -142,12 +144,6 @@ where
       "import" => Import,
       "if" => If,
       "quote" => Quote,
-      "+" => Operator(Add),
-      "-" => Operator(Sub),
-      "*" => Operator(Mul),
-      "/" => Operator(Div),
-      "%" => Operator(Mod),
-      "=" => Operator(Eq),
       _ => return Ok(Atom::Symbol(symbol)),
     };
 
@@ -187,22 +183,23 @@ where
     Ok(Symbol::new(buf))
   }
 
-  pub fn read_operator_symbol(&mut self) -> Result<Symbol, ReadError> {
+  pub fn read_operator(&mut self) -> Result<Operator, ReadError> {
+    use Operator::*;
     use ReadError::*;
 
     let operator = match self.source.peek() {
-      Some('+') => "+",
-      Some('-') => "-",
-      Some('*') => "*",
-      Some('/') => "/",
-      Some('%') => "%",
-      Some('=') => "=",
+      Some('+') => Add,
+      Some('-') => Sub,
+      Some('*') => Mul,
+      Some('/') => Div,
+      Some('%') => Mod,
+      Some('=') => Eq,
       Some(char) => return Err(UnexpectedChar(*char)),
       None => return Err(UnexpectedEndOfInput),
     };
     self.source.next();
 
-    Ok(Symbol::new(operator.to_string()))
+    Ok(operator)
   }
 
   pub fn read_string(&mut self) -> Result<String, ReadError> {
