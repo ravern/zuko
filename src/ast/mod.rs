@@ -43,6 +43,7 @@ pub enum Atom {
   Symbol(Symbol),
   String(String),
   Function(Function),
+  Macro(Macro),
   Special(Special),
 }
 
@@ -55,6 +56,7 @@ impl fmt::Display for Atom {
       Symbol(symbol) => write!(f, "{}", symbol),
       String(string) => write!(f, "{}", string),
       Function(function) => write!(f, "{}", function),
+      Macro(macr) => write!(f, "{}", macr),
       Special(special) => write!(f, "{}", special),
     }
   }
@@ -164,12 +166,61 @@ impl fmt::Debug for Function {
   }
 }
 
+#[derive(Clone)]
+pub struct Macro {
+  inner: Rc<MacroInner>,
+}
+
+pub struct MacroInner {
+  pub parameter: Symbol,
+  pub body: Expr,
+}
+
+impl Macro {
+  pub fn new(parameter: Symbol, body: Expr) -> Macro {
+    Macro {
+      inner: Rc::new(MacroInner { parameter, body }),
+    }
+  }
+
+  pub fn parameter(&self) -> &Symbol {
+    &self.inner.parameter
+  }
+
+  pub fn body(&self) -> &Expr {
+    &self.inner.body
+  }
+}
+
+impl PartialEq for Macro {
+  fn eq(&self, other: &Macro) -> bool {
+    Rc::ptr_eq(&self.inner, &other.inner)
+  }
+}
+
+impl fmt::Display for Macro {
+  fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+    write!(f, "Macro")
+  }
+}
+
+impl fmt::Debug for Macro {
+  fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+    write!(
+      f,
+      "Macro {{ parameter: {:?}, body: {:?} }}",
+      self.inner.parameter, self.inner.body
+    )
+  }
+}
+
 #[derive(Clone, Debug, PartialEq)]
 pub enum Special {
   Begin,
   Debug,
   Define,
   Function,
+  Macro,
   Import,
   If,
   Quote,

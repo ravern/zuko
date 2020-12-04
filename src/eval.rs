@@ -3,7 +3,8 @@ use std::{fs, io};
 use thiserror::Error;
 
 use crate::ast::{
-  self, Atom, Expr, Function, List, Operator, Special, Symbol, SYMBOL_TRUE,
+  self, Atom, Expr, Function, List, Macro, Operator, Special, Symbol,
+  SYMBOL_TRUE,
 };
 use crate::env::Frame;
 use crate::read;
@@ -53,6 +54,7 @@ impl Evaluator {
       Expr::Atom(Special(special)) => {
         return self.eval_call_special(special, tail)
       }
+      Expr::Atom(Macro(macr)) => return self.eval_call_macro(macr, tail),
       _ => return Err(NotCallable),
     };
 
@@ -85,6 +87,32 @@ impl Evaluator {
     Ok(expr)
   }
 
+  pub fn eval_call_macro(
+    &mut self,
+    macr: Macro,
+    tail: List,
+  ) -> Result<Expr, EvalError> {
+    use EvalError::*;
+
+    if tail.len() != 1 {
+      return Err(WrongArity);
+    }
+
+    let original_frame = self.frame.clone();
+    self.frame = Frame::new();
+
+    let argument = tail.get(0).unwrap().clone();
+    self.frame.set(macr.parameter().clone(), argument);
+
+    let mut expr = self.eval_expr(macr.body().clone())?;
+
+    self.frame = original_frame;
+
+    expr = self.eval_expr(expr)?;
+
+    Ok(expr)
+  }
+
   pub fn eval_call_special(
     &mut self,
     special: Special,
@@ -97,6 +125,7 @@ impl Evaluator {
       Debug => self.eval_call_debug(tail),
       Define => self.eval_call_define(tail),
       Function => self.eval_call_function(tail),
+      Macro => self.eval_call_special_macro(tail),
       Import => self.eval_call_import(tail),
       If => self.eval_call_if(tail),
       Quote => self.eval_call_quote(tail),
@@ -168,6 +197,28 @@ impl Evaluator {
     Ok(Expr::Atom(Atom::Function(Function::new(
       frame, parameters, body,
     ))))
+  }
+
+  pub fn eval_call_special_macro(
+    &mut self,
+    tail: List,
+  ) -> Result<Expr, EvalError> {
+    use EvalError::*;
+
+    if tail.len() != 2 {
+      return Err(WrongArity);
+    }
+
+    let parameters = self.as_list(tail.get(0).unwrap().clone())?;
+    let body = tail.get(1).unwrap().clone();
+
+    if parameters.len() != 1 {
+      return Err(WrongArity);
+    }
+
+    let parameter = self.as_symbol(parameters.get(0).unwrap().clone())?;
+
+    Ok(Expr::Atom(Atom::Macro(Macro::new(parameter, body))))
   }
 
   pub fn eval_call_import(&mut self, tail: List) -> Result<Expr, EvalError> {
@@ -286,6 +337,7 @@ impl Evaluator {
       "debug" => Debug,
       "define" => Define,
       "function" => Function,
+      "macro" => Macro,
       "import" => Import,
       "if" => If,
       "quote" => Quote,
@@ -353,6 +405,8 @@ pub enum EvalError {
   InvalidType,
   #[error("arity is wrong")]
   WrongArity,
+  #[error("missing parameter")]
+  MissingParameter,
   #[error("'{0}' is undefined")]
   UndefinedSymbol(Symbol),
   #[error("expression not callable")]
