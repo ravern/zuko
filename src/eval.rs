@@ -3,8 +3,8 @@ use std::{fs, io};
 use thiserror::Error;
 
 use crate::ast::{
-  self, Atom, Expr, Function, List, Macro, Operator, Special, Symbol,
-  SYMBOL_TRUE,
+  self, Atom, Expr, Function, List, Macro, Native, NativeError, Operator,
+  Special, Symbol, SYMBOL_TRUE,
 };
 use crate::env::Frame;
 use crate::read;
@@ -21,7 +21,7 @@ pub struct Evaluator {
 impl Evaluator {
   pub fn new() -> Evaluator {
     Evaluator {
-      frame: Frame::new(),
+      frame: Frame::base(),
     }
   }
 
@@ -36,7 +36,7 @@ impl Evaluator {
 
   pub fn eval_list(&mut self, list: List) -> Result<Expr, EvalError> {
     use Atom::*;
-    use EvalError::*;
+    use EvalError::{NotCallable, WrongArity};
     use List::*;
 
     let node = match &list {
@@ -52,6 +52,7 @@ impl Evaluator {
     let function = match head {
       Expr::Atom(Function(function)) => function,
       Expr::Atom(Macro(macr)) => return self.eval_call_macro(macr, tail),
+      Expr::Atom(Native(native)) => return self.eval_call_native(native, tail),
       Expr::Atom(Special(special)) => {
         return self.eval_call_special(special, tail)
       }
@@ -131,6 +132,19 @@ impl Evaluator {
       Quote => self.eval_call_special_quote(tail),
       Operator(operator) => self.eval_call_special_operator(operator, tail),
     }
+  }
+
+  pub fn eval_call_native(
+    &mut self,
+    native: Native,
+    tail: List,
+  ) -> Result<Expr, EvalError> {
+    let arguments = tail
+      .into_iter()
+      .map(|expr| self.eval_expr(expr))
+      .collect::<Result<Vec<Expr>, EvalError>>()?;
+
+    Ok(native(arguments)?)
   }
 
   pub fn eval_call_special_begin(
@@ -392,12 +406,12 @@ pub enum EvalError {
   Io(#[from] io::Error),
   #[error("{0}")]
   Read(#[from] read::ReadError),
+  #[error("{0}")]
+  Native(#[from] NativeError),
   #[error("type is invalid")]
   InvalidType,
   #[error("arity is wrong")]
   WrongArity,
-  #[error("missing parameter")]
-  MissingParameter,
   #[error("'{0}' is undefined")]
   UndefinedSymbol(Symbol),
   #[error("expression not callable")]

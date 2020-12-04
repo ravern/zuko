@@ -2,7 +2,7 @@ use std::cell::RefCell;
 use std::collections::BTreeMap;
 use std::rc::Rc;
 
-use crate::ast::{Expr, Symbol};
+use crate::ast::{self, Expr, NativeError, Symbol, SYMBOL_TRUE};
 
 #[derive(Clone, Debug)]
 pub struct Frame {
@@ -23,6 +23,49 @@ impl Frame {
         variables: BTreeMap::new(),
       })),
     }
+  }
+
+  pub fn base() -> Frame {
+    use ast::Atom::*;
+    use Expr::*;
+
+    let mut frame = Frame::new();
+
+    frame.set(SYMBOL_TRUE.clone(), Atom(Symbol(SYMBOL_TRUE.clone())));
+    frame.set(
+      ast::Symbol::new("tail"),
+      Atom(Native(Rc::new(|arguments| {
+        let list = match arguments.get(0) {
+          Some(Expr::List(list)) => list,
+          _ => return Err(NativeError {}),
+        };
+
+        let tail = match list {
+          ast::List::Cons(node) => node.tail.clone(),
+          ast::List::Nil => return Err(NativeError {}),
+        };
+
+        Ok(Expr::List(tail))
+      }))),
+    );
+    frame.set(
+      ast::Symbol::new("head"),
+      Atom(Native(Rc::new(|arguments| {
+        let list = match arguments.get(0) {
+          Some(Expr::List(list)) => list,
+          _ => return Err(NativeError {}),
+        };
+
+        let head = match list {
+          ast::List::Cons(node) => node.head.clone(),
+          ast::List::Nil => return Err(NativeError {}),
+        };
+
+        Ok(head)
+      }))),
+    );
+
+    frame
   }
 
   pub fn with_parent(parent: Frame) -> Frame {

@@ -137,13 +137,13 @@ where
 
     let special = match symbol.as_str() {
       "begin" => Begin,
-      "debug" => Debug,
       "define" => Define,
       "function" => Function,
       "macro" => Macro,
-      "import" => Import,
       "if" => If,
       "quote" => Quote,
+      "debug" => Debug,
+      "import" => Import,
       _ => return Ok(Atom::Symbol(symbol)),
     };
 

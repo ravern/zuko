@@ -3,6 +3,7 @@ use std::rc::Rc;
 use std::sync::{Arc, Mutex};
 
 use lazy_static::lazy_static;
+use thiserror::Error;
 
 use crate::env::Frame;
 
@@ -45,6 +46,7 @@ pub enum Atom {
   Function(Function),
   Macro(Macro),
   Special(Special),
+  Native(Native),
 }
 
 impl fmt::Display for Atom {
@@ -58,6 +60,7 @@ impl fmt::Display for Atom {
       Function(function) => write!(f, "{}", function),
       Macro(macr) => write!(f, "{}", macr),
       Special(special) => write!(f, "{}", special),
+      Native(_) => write!(f, "Native Function"),
     }
   }
 }
@@ -242,3 +245,9 @@ pub enum Operator {
   Mod,
   Eq,
 }
+
+pub type Native = Rc<fn(arguments: Vec<Expr>) -> Result<Expr, NativeError>>;
+
+#[derive(Debug, Error)]
+#[error("native error")]
+pub struct NativeError {}
