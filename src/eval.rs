@@ -3,7 +3,7 @@ use std::{fs, io};
 use thiserror::Error;
 
 use crate::ast::{
-  self, Atom, Expr, Function, List, Native, Operator, Symbol, SYMBOL_TRUE,
+  self, Atom, Expr, Function, List, Operator, Special, Symbol, SYMBOL_TRUE,
 };
 use crate::env::Frame;
 use crate::read;
@@ -50,7 +50,9 @@ impl Evaluator {
 
     let function = match head {
       Expr::Atom(Function(function)) => function,
-      Expr::Atom(Native(native)) => return self.eval_call_native(native, tail),
+      Expr::Atom(Special(special)) => {
+        return self.eval_call_special(special, tail)
+      }
       _ => return Err(NotCallable),
     };
 
@@ -83,14 +85,14 @@ impl Evaluator {
     Ok(expr)
   }
 
-  pub fn eval_call_native(
+  pub fn eval_call_special(
     &mut self,
-    native: Native,
+    special: Special,
     tail: List,
   ) -> Result<Expr, EvalError> {
-    use Native::*;
+    use Special::*;
 
-    match native {
+    match special {
       Begin => self.eval_call_begin(tail),
       Debug => self.eval_call_debug(tail),
       Define => self.eval_call_define(tail),
@@ -265,7 +267,7 @@ impl Evaluator {
   pub fn eval_symbol(&mut self, symbol: Symbol) -> Result<Expr, EvalError> {
     use EvalError::*;
 
-    if let Some(expr) = self.eval_native_symbol(&symbol) {
+    if let Some(expr) = self.eval_special_symbol(&symbol) {
       return Ok(expr);
     }
 
@@ -275,11 +277,11 @@ impl Evaluator {
     }
   }
 
-  pub fn eval_native_symbol(&mut self, symbol: &Symbol) -> Option<Expr> {
+  pub fn eval_special_symbol(&mut self, symbol: &Symbol) -> Option<Expr> {
     use ast::Operator::*;
-    use Native::*;
+    use Special::*;
 
-    let native = match symbol.as_str() {
+    let special = match symbol.as_str() {
       "begin" => Begin,
       "debug" => Debug,
       "define" => Define,
@@ -297,7 +299,7 @@ impl Evaluator {
       _ => return None,
     };
 
-    Some(Expr::Atom(Atom::Native(native)))
+    Some(Expr::Atom(Atom::Special(special)))
   }
 
   fn as_symbol(&mut self, expr: Expr) -> Result<Symbol, EvalError> {

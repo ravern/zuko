@@ -43,7 +43,7 @@ pub enum Atom {
   Symbol(Symbol),
   String(String),
   Function(Function),
-  Native(Native),
+  Special(Special),
 }
 
 impl fmt::Display for Atom {
@@ -55,7 +55,7 @@ impl fmt::Display for Atom {
       Symbol(symbol) => write!(f, "{}", symbol),
       String(string) => write!(f, "{}", string),
       Function(function) => write!(f, "{}", function),
-      Native(native) => write!(f, "{}", native),
+      Special(special) => write!(f, "{}", special),
     }
   }
 }
@@ -165,7 +165,7 @@ impl fmt::Debug for Function {
 }
 
 #[derive(Clone, Debug, PartialEq)]
-pub enum Native {
+pub enum Special {
   Begin,
   Debug,
   Define,
@@ -176,9 +176,9 @@ pub enum Native {
   Operator(Operator),
 }
 
-impl fmt::Display for Native {
+impl fmt::Display for Special {
   fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-    write!(f, "Native")
+    write!(f, "Special")
   }
 }
 
