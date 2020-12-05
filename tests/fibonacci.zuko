@@ -1,3 +1,5 @@
+; Recursive fibonacci function without optmisation.
+
 (begin
   (define fibonacci (function (n)
     (if (= n 0)

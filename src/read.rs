@@ -30,7 +30,7 @@ where
     use Expr::*;
     use ReadError::*;
 
-    self.skip_whitespace();
+    self.skip_whitespace_or_comment();
 
     let expr = match self.source.peek() {
       Some('(') => List(self.read_list()?),
@@ -38,7 +38,7 @@ where
       None => return Err(UnexpectedEndOfInput),
     };
 
-    self.skip_whitespace();
+    self.skip_whitespace_or_comment();
 
     Ok(expr)
   }
@@ -55,7 +55,7 @@ where
     self.source.next();
 
     // Catch empty lists
-    self.skip_whitespace();
+    self.skip_whitespace_or_comment();
     if let Some(')') = self.source.peek() {
       self.source.next();
       return Ok(List::Nil);
@@ -231,12 +231,31 @@ where
     Ok(buf)
   }
 
-  pub fn skip_whitespace(&mut self) {
+  pub fn skip_whitespace_or_comment(&mut self) {
     loop {
       match self.source.peek() {
+        Some(';') => self.skip_comment(),
         Some(char) if !char.is_whitespace() => break,
         None => break,
         _ => {}
+      }
+      self.source.next();
+    }
+  }
+
+  pub fn skip_comment(&mut self) {
+    match self.source.peek() {
+      Some(';') => {}
+      Some(_) => return,
+      None => return,
+    };
+    self.source.next();
+
+    loop {
+      match self.source.peek() {
+        Some('\n') => break,
+        Some(_) => {}
+        None => break,
       }
       self.source.next();
     }
