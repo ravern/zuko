@@ -6,7 +6,7 @@ use crate::ast::{
   self, Atom, Expr, Function, List, Macro, Native, NativeError, Operator,
   Special, Symbol, SYMBOL_TRUE,
 };
-use crate::env::Frame;
+use crate::env::{Frame, BASE_FRAME};
 use crate::read;
 
 pub fn eval(expr: Expr) -> Result<Expr, EvalError> {
@@ -21,7 +21,7 @@ pub struct Evaluator {
 impl Evaluator {
   pub fn new() -> Evaluator {
     Evaluator {
-      frame: Frame::base(),
+      frame: BASE_FRAME.clone(),
     }
   }
 
@@ -144,7 +144,7 @@ impl Evaluator {
       .map(|expr| self.eval_expr(expr))
       .collect::<Result<Vec<Expr>, EvalError>>()?;
 
-    Ok(native(arguments)?)
+    Ok(native.call(arguments)?)
   }
 
   pub fn eval_call_special_begin(

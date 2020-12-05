@@ -60,7 +60,7 @@ impl fmt::Display for Atom {
       Function(function) => write!(f, "{}", function),
       Macro(macr) => write!(f, "{}", macr),
       Special(special) => write!(f, "{}", special),
-      Native(_) => write!(f, "Native Function"),
+      Native(native) => write!(f, "{}", native),
     }
   }
 }
@@ -246,7 +246,42 @@ pub enum Operator {
   Eq,
 }
 
-pub type Native = Rc<fn(arguments: Vec<Expr>) -> Result<Expr, NativeError>>;
+#[derive(Clone)]
+pub struct Native {
+  inner: Rc<NativeFn>,
+}
+
+impl Native {
+  pub fn new(native: NativeFn) -> Native {
+    Native {
+      inner: Rc::new(native),
+    }
+  }
+
+  pub fn call(&self, arguments: Vec<Expr>) -> Result<Expr, NativeError> {
+    self.inner.as_ref()(arguments)
+  }
+}
+
+impl PartialEq for Native {
+  fn eq(&self, other: &Native) -> bool {
+    Rc::ptr_eq(&self.inner, &other.inner)
+  }
+}
+
+impl fmt::Display for Native {
+  fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+    write!(f, "Native Function")
+  }
+}
+
+impl fmt::Debug for Native {
+  fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+    write!(f, "Native")
+  }
+}
+
+pub type NativeFn = fn(arguments: Vec<Expr>) -> Result<Expr, NativeError>;
 
 #[derive(Debug, Error)]
 #[error("native error")]
