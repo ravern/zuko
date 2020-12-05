@@ -5,8 +5,29 @@ use thiserror::Error;
 use crate::ast::{self, Atom, Expr, List, Operator, Special, Symbol};
 
 pub fn read(source: &str) -> Result<Expr, ReadError> {
+  use List::*;
+
   let mut reader = Reader::new(source.chars());
-  reader.read_expr()
+
+  let mut exprs = vec![];
+
+  loop {
+    exprs.push(reader.read_expr()?);
+    if reader.is_empty() {
+      break;
+    }
+  }
+
+  exprs.reverse();
+  let mut list = Nil;
+  for expr in exprs.into_iter() {
+    list = List::cons(expr, list);
+  }
+
+  Ok(Expr::List(List::cons(
+    Expr::Atom(Atom::Special(Special::Begin)),
+    list,
+  )))
 }
 
 pub struct Reader<I>
@@ -24,6 +45,10 @@ where
     Reader {
       source: source.peekable(),
     }
+  }
+
+  pub fn is_empty(&mut self) -> bool {
+    self.source.peek().is_none()
   }
 
   pub fn read_expr(&mut self) -> Result<Expr, ReadError> {

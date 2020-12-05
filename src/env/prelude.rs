@@ -15,6 +15,7 @@ pub fn build_base_frame() -> Frame {
   frame.set(Symbol::new("print"), Atom(Native(Native::new(print))));
   frame.set(Symbol::new("head"), Atom(Native(Native::new(head))));
   frame.set(Symbol::new("tail"), Atom(Native(Native::new(tail))));
+  frame.set(Symbol::new("cons"), Atom(Native(Native::new(cons))));
 
   frame
 }
@@ -86,4 +87,22 @@ fn tail(arguments: Vec<Expr>) -> Result<Expr, EvalError> {
   };
 
   Ok(Expr::List(tail))
+}
+
+fn cons(arguments: Vec<Expr>) -> Result<Expr, EvalError> {
+  use ast::List;
+  use EvalError::*;
+
+  if arguments.len() != 2 {
+    return Err(WrongArity);
+  }
+
+  let head = arguments.get(0).unwrap().clone();
+
+  let tail = match arguments.get(1) {
+    Some(Expr::List(list)) => list.clone(),
+    _ => return Err(InvalidType),
+  };
+
+  Ok(Expr::List(List::cons(head, tail)))
 }

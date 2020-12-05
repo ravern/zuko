@@ -1,10 +1,10 @@
-(begin
-  (define fizz-buzz (function (n)
-    (if (= (% n 3) 0)
-      (if (= (% n 5) 0)
-        "FizzBuzz"
-        "Fizz")
-      (if (= (% n 5) 0)
-        "Buzz"
-        ""))))
-  (fizz-buzz 30))
+(define fizz-buzz (function (n)
+  (if (= (% n 3) 0)
+    (if (= (% n 5) 0)
+      "FizzBuzz"
+      "Fizz")
+    (if (= (% n 5) 0)
+      "Buzz"
+      ""))))
+
+(fizz-buzz 30)
