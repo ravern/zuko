@@ -3,9 +3,9 @@ use std::rc::Rc;
 use std::sync::{Arc, Mutex};
 
 use lazy_static::lazy_static;
-use thiserror::Error;
 
 use crate::env::Frame;
+use crate::eval::EvalError;
 
 pub use self::list::{List, Node};
 
@@ -220,11 +220,9 @@ impl fmt::Debug for Macro {
 #[derive(Clone, Debug, PartialEq)]
 pub enum Special {
   Begin,
-  Debug,
   Define,
   Function,
   Macro,
-  Import,
   If,
   Quote,
   Operator(Operator),
@@ -258,7 +256,7 @@ impl Native {
     }
   }
 
-  pub fn call(&self, arguments: Vec<Expr>) -> Result<Expr, NativeError> {
+  pub fn call(&self, arguments: Vec<Expr>) -> Result<Expr, EvalError> {
     self.inner.as_ref()(arguments)
   }
 }
@@ -281,8 +279,4 @@ impl fmt::Debug for Native {
   }
 }
 
-pub type NativeFn = fn(arguments: Vec<Expr>) -> Result<Expr, NativeError>;
-
-#[derive(Debug, Error)]
-#[error("native error")]
-pub struct NativeError {}
+pub type NativeFn = fn(arguments: Vec<Expr>) -> Result<Expr, EvalError>;

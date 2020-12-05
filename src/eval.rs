@@ -1,13 +1,12 @@
-use std::{fs, io};
+use std::error::Error;
 
 use thiserror::Error;
 
 use crate::ast::{
-  self, Atom, Expr, Function, List, Macro, Native, NativeError, Operator,
-  Special, Symbol, SYMBOL_TRUE,
+  self, Atom, Expr, Function, List, Macro, Native, Operator, Special, Symbol,
+  SYMBOL_TRUE,
 };
-use crate::env::{Frame, BASE_FRAME};
-use crate::read;
+use crate::env::Frame;
 
 pub fn eval(expr: Expr) -> Result<Expr, EvalError> {
   let mut evalutor = Evaluator::new();
@@ -21,7 +20,7 @@ pub struct Evaluator {
 impl Evaluator {
   pub fn new() -> Evaluator {
     Evaluator {
-      frame: BASE_FRAME.clone(),
+      frame: Frame::base(),
     }
   }
 
@@ -123,11 +122,9 @@ impl Evaluator {
 
     match special {
       Begin => self.eval_call_special_begin(tail),
-      Debug => self.eval_call_special_debug(tail),
       Define => self.eval_call_special_define(tail),
       Function => self.eval_call_special_function(tail),
       Macro => self.eval_call_special_macro(tail),
-      Import => self.eval_call_special_import(tail),
       If => self.eval_call_special_if(tail),
       Quote => self.eval_call_special_quote(tail),
       Operator(operator) => self.eval_call_special_operator(operator, tail),
@@ -144,7 +141,7 @@ impl Evaluator {
       .map(|expr| self.eval_expr(expr))
       .collect::<Result<Vec<Expr>, EvalError>>()?;
 
-    Ok(native.call(arguments)?)
+    native.call(arguments)
   }
 
   pub fn eval_call_special_begin(
@@ -163,23 +160,6 @@ impl Evaluator {
       .collect::<Result<Vec<Expr>, EvalError>>()?;
 
     Ok(tail.pop().unwrap())
-  }
-
-  pub fn eval_call_special_debug(
-    &mut self,
-    tail: List,
-  ) -> Result<Expr, EvalError> {
-    use EvalError::*;
-
-    if tail.len() != 1 {
-      return Err(WrongArity);
-    }
-
-    let expr = self.eval_expr(tail.get(0).unwrap().clone())?;
-
-    println!("{}", expr);
-
-    Ok(expr)
   }
 
   pub fn eval_call_special_define(
@@ -245,24 +225,6 @@ impl Evaluator {
     let parameter = self.as_symbol(parameters.get(0).unwrap().clone())?;
 
     Ok(Expr::Atom(Atom::Macro(Macro::new(parameter, body))))
-  }
-
-  pub fn eval_call_special_import(
-    &mut self,
-    tail: List,
-  ) -> Result<Expr, EvalError> {
-    use EvalError::*;
-
-    if tail.len() != 1 {
-      return Err(WrongArity);
-    }
-
-    let path = self.as_string(tail.get(0).unwrap().clone())?;
-
-    let source = fs::read_to_string(path.as_str())?;
-
-    let expr = read::read(&source)?;
-    self.eval_expr(expr)
   }
 
   pub fn eval_call_special_if(
@@ -369,16 +331,6 @@ impl Evaluator {
     }
   }
 
-  fn as_string(&mut self, expr: Expr) -> Result<String, EvalError> {
-    use Atom::*;
-    use EvalError::*;
-
-    match expr {
-      Expr::Atom(String(string)) => Ok(string),
-      _ => Err(InvalidType),
-    }
-  }
-
   fn as_list(&mut self, expr: Expr) -> Result<List, EvalError> {
     use EvalError::*;
     use Expr::*;
@@ -402,12 +354,6 @@ impl Evaluator {
 
 #[derive(Debug, Error)]
 pub enum EvalError {
-  #[error("{0}")]
-  Io(#[from] io::Error),
-  #[error("{0}")]
-  Read(#[from] read::ReadError),
-  #[error("{0}")]
-  Native(#[from] NativeError),
   #[error("type is invalid")]
   InvalidType,
   #[error("arity is wrong")]
@@ -416,4 +362,6 @@ pub enum EvalError {
   UndefinedSymbol(Symbol),
   #[error("expression not callable")]
   NotCallable,
+  #[error("{0}")]
+  Native(Box<dyn Error>),
 }

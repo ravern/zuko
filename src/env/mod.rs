@@ -4,7 +4,7 @@ use std::rc::Rc;
 
 use crate::ast::{Expr, Symbol};
 
-pub use self::prelude::BASE_FRAME;
+pub use self::prelude::build_base_frame;
 
 mod prelude;
 
@@ -27,6 +27,10 @@ impl Frame {
         variables: BTreeMap::new(),
       })),
     }
+  }
+
+  pub fn base() -> Frame {
+    build_base_frame()
   }
 
   pub fn with_parent(parent: Frame) -> Frame {

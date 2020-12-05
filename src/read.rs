@@ -142,8 +142,6 @@ where
       "macro" => Macro,
       "if" => If,
       "quote" => Quote,
-      "debug" => Debug,
-      "import" => Import,
       _ => return Ok(Atom::Symbol(symbol)),
     };
 
