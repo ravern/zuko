@@ -152,16 +152,19 @@ where
     use ReadError::*;
 
     let mut buf = Vec::new();
+    let mut should_break = false;
     let mut prev_punct_dist = 0;
 
     loop {
       match self.source.peek() {
+        Some(')') => break,
+        Some(char) if char.is_whitespace() => break,
+        Some(char) if should_break => return Err(UnexpectedChar(*char)),
         Some(char) if char.is_alphabetic() && char.is_lowercase() => {}
         Some('-') | Some('/') if prev_punct_dist > 0 => {
           prev_punct_dist = -1;
         }
-        Some(')') => break,
-        Some(char) if char.is_whitespace() => break,
+        Some('?') => should_break = true,
         Some(char) => return Err(UnexpectedChar(*char)),
         None => break,
       }
@@ -255,10 +258,13 @@ where
       match self.source.peek() {
         Some('\n') => break,
         Some(_) => {}
-        None => break,
+        None => return,
       }
       self.source.next();
     }
+
+    // Get rid of final newline.
+    self.source.next();
   }
 }
 

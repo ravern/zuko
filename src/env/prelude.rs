@@ -12,14 +12,14 @@ pub fn build_base_frame() -> Frame {
 
   frame.set(SYMBOL_TRUE.clone(), Atom(Symbol(SYMBOL_TRUE.clone())));
 
-  frame.set(Symbol::new("debug"), Atom(Native(Native::new(debug))));
+  frame.set(Symbol::new("print"), Atom(Native(Native::new(print))));
   frame.set(Symbol::new("head"), Atom(Native(Native::new(head))));
   frame.set(Symbol::new("tail"), Atom(Native(Native::new(tail))));
 
   frame
 }
 
-pub fn debug(arguments: Vec<Expr>) -> Result<Expr, EvalError> {
+pub fn print(arguments: Vec<Expr>) -> Result<Expr, EvalError> {
   use EvalError::*;
 
   if arguments.len() != 1 {
