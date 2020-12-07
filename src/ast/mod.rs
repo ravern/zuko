@@ -56,7 +56,7 @@ impl fmt::Display for Atom {
     match self {
       Number(number) => write!(f, "{}", number),
       Symbol(symbol) => write!(f, "{}", symbol),
-      String(string) => write!(f, "{}", string),
+      String(string) => write!(f, "\"{}\"", string),
       Function(function) => write!(f, "{}", function),
       Macro(macr) => write!(f, "{}", macr),
       Special(special) => write!(f, "{}", special),
