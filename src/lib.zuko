@@ -1,13 +1,31 @@
+(define nil?
+        (function (x) (= x ())))
+
+(define zero?
+        (function (x) (= x 0)))
+
+(define list
+        (macro (terms)
+               ((define do-list
+                        (function (terms)
+                                  (if (nil? terms)
+                                      ()
+                                      (cons (quote cons)
+                                            (cons (head terms)
+                                                  (cons (do-list (tail terms))
+                                                        ()))))))
+               terms)))
+
 (define map
         (function (list f)
-                  (if (= list ())
+                  (if (nil? list)
                       list
                       (cons (f (head list))
                             (map (tail list) f)))))
 
 (define filter
         (function (list p)
-                  (if (= list ())
+                  (if (nil? list)
                       list
                       (if (p (head list))
                           (cons (head list)
@@ -16,8 +34,14 @@
 
 (define reduce
         (function (list f init)
-                  (if (= list ())
+                  (if (nil? list)
                       init
                       (reduce (tail list)
                               f
                               (f (head list) init)))))
+
+(define range
+        (function (min max)
+                  (if (= min max)
+                      ()
+                      (cons min (range (+ min 1) max)))))

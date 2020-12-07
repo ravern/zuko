@@ -99,16 +99,12 @@ impl Evaluator {
     macr: Macro,
     tail: List,
   ) -> Result<Expr, EvalError> {
-    use EvalError::*;
-
-    if tail.len() != 1 {
-      return Err(WrongArity);
-    }
+    use Expr::*;
 
     let original_frame = self.frame.clone();
-    self.frame = Frame::new();
+    self.frame = Frame::with_parent(original_frame.clone());
 
-    let argument = tail.get(0).unwrap().clone();
+    let argument = List(tail);
     self.frame.set(macr.parameter().clone(), argument);
 
     let mut expr = self.eval_expr(macr.body().clone())?;
