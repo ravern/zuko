@@ -25,7 +25,7 @@ impl Evaluator {
     };
 
     // Inject standard library.
-    let expr = read::read(include_str!("std.zuko")).unwrap();
+    let expr = read::read(include_str!("lib.zuko")).unwrap();
     evaluator.eval_expr(expr).unwrap();
 
     evaluator
