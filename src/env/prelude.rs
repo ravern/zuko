@@ -1,4 +1,4 @@
-use crate::ast::{self, Expr, SYMBOL_TRUE};
+use crate::ast::{self, Atom, Expr, List, SYMBOL_TRUE};
 use crate::env::Frame;
 use crate::eval::EvalError;
 
@@ -16,6 +16,19 @@ pub fn build_base_frame() -> Frame {
   frame.set(Symbol::new("head"), Atom(Native(Native::new(head))));
   frame.set(Symbol::new("tail"), Atom(Native(Native::new(tail))));
   frame.set(Symbol::new("cons"), Atom(Native(Native::new(cons))));
+
+  frame.set(Symbol::new("number?"), Atom(Native(Native::new(is_number))));
+  frame.set(Symbol::new("string?"), Atom(Native(Native::new(is_string))));
+  frame.set(Symbol::new("symbol?"), Atom(Native(Native::new(is_symbol))));
+  frame.set(
+    Symbol::new("function?"),
+    Atom(Native(Native::new(is_function))),
+  );
+  frame.set(
+    Symbol::new("special?"),
+    Atom(Native(Native::new(is_special))),
+  );
+  frame.set(Symbol::new("native?"), Atom(Native(Native::new(is_native))));
 
   frame
 }
@@ -75,7 +88,6 @@ fn tail(arguments: Vec<Expr>) -> Result<Expr, EvalError> {
 }
 
 fn cons(arguments: Vec<Expr>) -> Result<Expr, EvalError> {
-  use ast::List;
   use EvalError::*;
 
   if arguments.len() != 2 {
@@ -90,4 +102,100 @@ fn cons(arguments: Vec<Expr>) -> Result<Expr, EvalError> {
   };
 
   Ok(Expr::List(List::cons(head, tail)))
+}
+
+pub fn is_number(arguments: Vec<Expr>) -> Result<Expr, EvalError> {
+  use EvalError::*;
+
+  if arguments.len() != 1 {
+    return Err(WrongArity);
+  }
+
+  let expr = arguments.get(0).unwrap().clone();
+
+  if let Expr::Atom(Atom::Number(_)) = expr {
+    Ok(Expr::Atom(Atom::Symbol(SYMBOL_TRUE.clone())))
+  } else {
+    Ok(Expr::List(List::Nil))
+  }
+}
+
+pub fn is_string(arguments: Vec<Expr>) -> Result<Expr, EvalError> {
+  use EvalError::*;
+
+  if arguments.len() != 1 {
+    return Err(WrongArity);
+  }
+
+  let expr = arguments.get(0).unwrap().clone();
+
+  if let Expr::Atom(Atom::String(_)) = expr {
+    Ok(Expr::Atom(Atom::Symbol(SYMBOL_TRUE.clone())))
+  } else {
+    Ok(Expr::List(List::Nil))
+  }
+}
+
+pub fn is_symbol(arguments: Vec<Expr>) -> Result<Expr, EvalError> {
+  use EvalError::*;
+
+  if arguments.len() != 1 {
+    return Err(WrongArity);
+  }
+
+  let expr = arguments.get(0).unwrap().clone();
+
+  if let Expr::Atom(Atom::Symbol(_)) = expr {
+    Ok(Expr::Atom(Atom::Symbol(SYMBOL_TRUE.clone())))
+  } else {
+    Ok(Expr::List(List::Nil))
+  }
+}
+
+pub fn is_function(arguments: Vec<Expr>) -> Result<Expr, EvalError> {
+  use EvalError::*;
+
+  if arguments.len() != 1 {
+    return Err(WrongArity);
+  }
+
+  let expr = arguments.get(0).unwrap().clone();
+
+  if let Expr::Atom(Atom::Function(_)) = expr {
+    Ok(Expr::Atom(Atom::Symbol(SYMBOL_TRUE.clone())))
+  } else {
+    Ok(Expr::List(List::Nil))
+  }
+}
+
+pub fn is_special(arguments: Vec<Expr>) -> Result<Expr, EvalError> {
+  use EvalError::*;
+
+  if arguments.len() != 1 {
+    return Err(WrongArity);
+  }
+
+  let expr = arguments.get(0).unwrap().clone();
+
+  if let Expr::Atom(Atom::Special(_)) = expr {
+    Ok(Expr::Atom(Atom::Symbol(SYMBOL_TRUE.clone())))
+  } else {
+    Ok(Expr::List(List::Nil))
+  }
+}
+
+pub fn is_native(arguments: Vec<Expr>) -> Result<Expr, EvalError> {
+  use EvalError::*;
+
+  if arguments.len() != 1 {
+    return Err(WrongArity);
+  }
+
+  let expr = arguments.get(0).unwrap().clone();
+
+  if let Expr::Atom(Atom::Native(_)) = expr {
+    Ok(Expr::Atom(Atom::Symbol(SYMBOL_TRUE.clone())))
+  } else {
+    Ok(Expr::List(List::Nil))
+  }
 }
