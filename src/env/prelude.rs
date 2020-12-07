@@ -34,21 +34,6 @@ pub fn print(arguments: Vec<Expr>) -> Result<Expr, EvalError> {
   Ok(expr)
 }
 
-// pub fn import(arguments: Vec<Expr>) -> Result<Expr, EvalError> {
-//   use EvalError::*;
-
-//   if tail.len() != 1 {
-//     return Err(WrongArity);
-//   }
-
-//   let path = self.as_string(tail.get(0).unwrap().clone())?;
-
-//   let source = fs::read_to_string(path.as_str())?;
-
-//   let expr = read::read(&source)?;
-//   self.eval_expr(expr)
-// }
-
 fn head(arguments: Vec<Expr>) -> Result<Expr, EvalError> {
   use EvalError::*;
 
