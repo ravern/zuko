@@ -30,6 +30,8 @@ pub fn build_base_frame() -> Frame {
   );
   frame.set(Symbol::new("native?"), Atom(Native(Native::new(is_native))));
 
+  frame.set(Symbol::new("sqrt"), Atom(Native(Native::new(sqrt))));
+
   frame
 }
 
@@ -198,4 +200,19 @@ pub fn is_native(arguments: Vec<Expr>) -> Result<Expr, EvalError> {
   } else {
     Ok(Expr::List(List::Nil))
   }
+}
+
+pub fn sqrt(arguments: Vec<Expr>) -> Result<Expr, EvalError> {
+  use EvalError::*;
+
+  if arguments.len() != 1 {
+    return Err(WrongArity);
+  }
+
+  let number = match arguments.get(0) {
+    Some(Expr::Atom(Atom::Number(number))) => number,
+    _ => return Err(InvalidType),
+  };
+
+  Ok(Expr::Atom(Atom::Number(number.sqrt())))
 }
