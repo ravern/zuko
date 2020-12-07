@@ -1,0 +1,23 @@
+(define map
+        (function (list f)
+                  (if (= list ())
+                      list
+                      (cons (f (head list))
+                            (map (tail list) f)))))
+
+(define filter
+        (function (list p)
+                  (if (= list ())
+                      list
+                      (if (p (head list))
+                          (cons (head list)
+                                (filter (tail list) p))
+                          (filter (tail list) p)))))
+
+(define reduce
+        (function (list f init)
+                  (if (= list ())
+                      init
+                      (reduce (tail list)
+                              f
+                              (f (head list) init)))))

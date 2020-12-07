@@ -7,6 +7,7 @@ use crate::ast::{
   SYMBOL_TRUE,
 };
 use crate::env::Frame;
+use crate::read;
 
 pub fn eval(expr: Expr) -> Result<Expr, EvalError> {
   let mut evalutor = Evaluator::new();
@@ -19,9 +20,15 @@ pub struct Evaluator {
 
 impl Evaluator {
   pub fn new() -> Evaluator {
-    Evaluator {
+    let mut evaluator = Evaluator {
       frame: Frame::base(),
-    }
+    };
+
+    // Inject standard library.
+    let expr = read::read(include_str!("std.zuko")).unwrap();
+    evaluator.eval_expr(expr).unwrap();
+
+    evaluator
   }
 
   pub fn eval_expr(&mut self, expr: Expr) -> Result<Expr, EvalError> {
@@ -282,15 +289,32 @@ impl Evaluator {
     let left = self.eval_expr(left)?;
     let right = self.eval_expr(right)?;
 
-    let left = self.as_number(left)?;
-    let right = self.as_number(right)?;
-
     let result = match operator {
-      Add => Atom(Number(left + right)),
-      Sub => Atom(Number(left - right)),
-      Mul => Atom(Number(left * right)),
-      Div => Atom(Number(left / right)),
-      Mod => Atom(Number(left % right)),
+      Add => {
+        let left = self.as_number(left)?;
+        let right = self.as_number(right)?;
+        Atom(Number(left + right))
+      }
+      Sub => {
+        let left = self.as_number(left)?;
+        let right = self.as_number(right)?;
+        Atom(Number(left - right))
+      }
+      Mul => {
+        let left = self.as_number(left)?;
+        let right = self.as_number(right)?;
+        Atom(Number(left * right))
+      }
+      Div => {
+        let left = self.as_number(left)?;
+        let right = self.as_number(right)?;
+        Atom(Number(left / right))
+      }
+      Mod => {
+        let left = self.as_number(left)?;
+        let right = self.as_number(right)?;
+        Atom(Number(left % right))
+      }
       Eq => {
         if left == right {
           Atom(Symbol(SYMBOL_TRUE.clone()))
