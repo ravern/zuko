@@ -22,3 +22,13 @@ pub fn fizz_buzz() {
 
   assert_eq!(eval_expr, Expr::Atom(Atom::String("FizzBuzz".into())))
 }
+
+#[test]
+pub fn square_root() {
+  let source = fs::read_to_string("tests/square-root.zuko").unwrap();
+
+  let read_expr = read::read(&source).unwrap();
+  let eval_expr = eval::eval(read_expr).unwrap();
+
+  assert_eq!(eval_expr, Expr::Atom(Atom::Number(2.0000000929222947)))
+}

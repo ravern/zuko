@@ -4,6 +4,12 @@
 (define zero?
         (function (x) (= x 0)))
 
+(define abs
+        (function (x)
+                  (if (< x 0)
+                      (* (- 0 1) x)
+                      x)))
+
 (define list
         (macro (terms)
                ((define do-list

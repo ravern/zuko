@@ -311,6 +311,24 @@ impl Evaluator {
         let right = self.as_number(right)?;
         Atom(Number(left % right))
       }
+      Gt => {
+        let left = self.as_number(left)?;
+        let right = self.as_number(right)?;
+        if left > right {
+          Atom(Symbol(SYMBOL_TRUE.clone()))
+        } else {
+          List(Nil)
+        }
+      }
+      Lt => {
+        let left = self.as_number(left)?;
+        let right = self.as_number(right)?;
+        if left < right {
+          Atom(Symbol(SYMBOL_TRUE.clone()))
+        } else {
+          List(Nil)
+        }
+      }
       Eq => {
         if left == right {
           Atom(Symbol(SYMBOL_TRUE.clone()))

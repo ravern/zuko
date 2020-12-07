@@ -1,0 +1,11 @@
+(define square-root
+        (function (n)
+                  ((define do-square-root
+                           (function (x)
+                                     (begin (define root (* 0.5 (+ x (/ n x))))
+                                            (if (< (abs (- root x)) 0.01)
+                                                root
+                                                (do-square-root root)))))
+                  n)))
+
+(square-root 4)

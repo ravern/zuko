@@ -241,6 +241,8 @@ pub enum Operator {
   Mul,
   Div,
   Mod,
+  Gt,
+  Lt,
   Eq,
 }
 
