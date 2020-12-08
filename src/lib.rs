@@ -35,7 +35,7 @@ fn run_file(path: &str) -> Result<(), RunError> {
 }
 
 fn run_repl() -> Result<(), RunError> {
-  println!("Zuko v0.1.0");
+  println!("Zuko v1.0.0");
 
   let mut editor = Editor::<()>::new();
   editor.set_auto_add_history(true);
