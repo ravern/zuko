@@ -10,6 +10,11 @@
                       (* (- 0 1) x)
                       x)))
 
+(define apply
+        (macro (terms)
+               (cons (head terms)
+                     (head (tail terms)))))
+
 (define list
         (macro (terms)
                ((define do-list
