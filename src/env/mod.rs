@@ -2,21 +2,21 @@ use std::cell::RefCell;
 use std::collections::BTreeMap;
 use std::rc::Rc;
 
-use crate::ast::{Expr, Symbol};
+use crate::ast::{Expression, Symbol};
 
 pub use self::prelude::build_base_frame;
 
 mod prelude;
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct Frame {
   inner: Rc<RefCell<FrameInner>>,
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 struct FrameInner {
   parent: Option<Frame>,
-  variables: BTreeMap<Symbol, Expr>,
+  variables: BTreeMap<Symbol, Expression>,
 }
 
 impl Frame {
@@ -42,7 +42,7 @@ impl Frame {
     }
   }
 
-  pub fn get(&self, symbol: &Symbol) -> Option<Expr> {
+  pub fn get(&self, symbol: &Symbol) -> Option<Expression> {
     if let Some(expr) = self.inner.borrow().variables.get(symbol) {
       Some(expr.clone())
     } else {
@@ -55,7 +55,7 @@ impl Frame {
     }
   }
 
-  pub fn set(&mut self, symbol: Symbol, expr: Expr) {
+  pub fn set(&mut self, symbol: Symbol, expr: Expression) {
     self.inner.borrow_mut().variables.insert(symbol, expr);
   }
 }

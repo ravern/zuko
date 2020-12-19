@@ -5,6 +5,7 @@ authors = ["Ravern Koh <ravern@taskade.com>"]
 edition = "2018"
 
 [dependencies]
+internment = "0.4.1"
 lazy_static = "1.4.0"
 rustyline = "6.0.0"
 thiserror = "1.0"

@@ -1,6 +1,6 @@
 use std::fs;
 
-use zuko::ast::{Atom, Expr};
+use zuko::ast::{Atom, Expression};
 use zuko::{eval, read};
 
 #[test]
@@ -10,7 +10,7 @@ pub fn fibonacci() {
   let read_expr = read::read(&source).unwrap();
   let eval_expr = eval::eval(read_expr).unwrap();
 
-  assert_eq!(eval_expr, Expr::Atom(Atom::Number(6765.0)))
+  assert_eq!(eval_expr, Expression::Atom(Atom::Number(6765.0)))
 }
 
 #[test]
@@ -20,7 +20,7 @@ pub fn fizz_buzz() {
   let read_expr = read::read(&source).unwrap();
   let eval_expr = eval::eval(read_expr).unwrap();
 
-  assert_eq!(eval_expr, Expr::Atom(Atom::String("FizzBuzz".into())))
+  assert_eq!(eval_expr, Expression::Atom(Atom::String("FizzBuzz".into())))
 }
 
 #[test]
@@ -30,5 +30,8 @@ pub fn square_root() {
   let read_expr = read::read(&source).unwrap();
   let eval_expr = eval::eval(read_expr).unwrap();
 
-  assert_eq!(eval_expr, Expr::Atom(Atom::Number(2.0000000929222947)))
+  assert_eq!(
+    eval_expr,
+    Expression::Atom(Atom::Number(2.0000000929222947))
+  )
 }

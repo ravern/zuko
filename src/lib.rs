@@ -5,7 +5,7 @@ use rustyline::error::ReadlineError;
 use rustyline::Editor;
 use thiserror::Error;
 
-use crate::ast::Expr;
+use crate::ast::Expression;
 use crate::eval::{EvalError, Evaluator};
 use crate::read::ReadError;
 
@@ -28,7 +28,7 @@ pub fn run() -> Result<(), RunError> {
 fn run_file(path: &str) -> Result<(), RunError> {
   let source = fs::read_to_string(path)?;
 
-  let expr = read::read(&source)?;
+  let expr = read::read(source.chars())?;
   eval::eval(expr)?;
 
   Ok(())
@@ -45,7 +45,7 @@ fn run_repl() -> Result<(), RunError> {
   loop {
     match editor.readline("> ") {
       Ok(line) => match read_and_eval_line(&mut evaluator, &line) {
-        Ok(expr) => println!("{}", expr),
+        Ok(expr) => println!("{:?}", expr),
         Err(error) => println!("error: {}", error),
       },
       Err(ReadlineError::Interrupted) => break,
@@ -61,8 +61,8 @@ fn run_repl() -> Result<(), RunError> {
 fn read_and_eval_line(
   evaluator: &mut Evaluator,
   line: &str,
-) -> Result<Expr, RunError> {
-  let expr = read::read(line)?;
+) -> Result<Expression, RunError> {
+  let expr = read::read(line.chars())?;
   let expr = evaluator.eval_expr(expr)?;
   Ok(expr)
 }

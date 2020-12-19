@@ -3,13 +3,12 @@ use std::error::Error;
 use thiserror::Error;
 
 use crate::ast::{
-  self, Atom, Expr, Function, List, Macro, Native, Operator, Special, Symbol,
-  SYMBOL_TRUE,
+  self, Atom, Expression, Function, List, Macro, Native, Special, Symbol,
 };
 use crate::env::Frame;
 use crate::read;
 
-pub fn eval(expr: Expr) -> Result<Expr, EvalError> {
+pub fn eval(expr: Expression) -> Result<Expression, EvalError> {
   let mut evalutor = Evaluator::new();
   evalutor.eval_expr(expr)
 }
@@ -25,14 +24,17 @@ impl Evaluator {
     };
 
     // Inject standard library.
-    let expr = read::read(include_str!("lib.zuko")).unwrap();
+    let expr = read::read(include_str!("lib.zuko").chars()).unwrap();
     evaluator.eval_expr(expr).unwrap();
 
     evaluator
   }
 
-  pub fn eval_expr(&mut self, expr: Expr) -> Result<Expr, EvalError> {
-    use Expr::*;
+  pub fn eval_expr(
+    &mut self,
+    expr: Expression,
+  ) -> Result<Expression, EvalError> {
+    use Expression::*;
 
     match expr {
       List(list) => self.eval_list(list),
@@ -40,14 +42,14 @@ impl Evaluator {
     }
   }
 
-  pub fn eval_list(&mut self, list: List) -> Result<Expr, EvalError> {
+  pub fn eval_list(&mut self, list: List) -> Result<Expression, EvalError> {
     use Atom::*;
     use EvalError::{NotCallable, WrongArity};
     use List::*;
 
     let node = match &list {
       Cons(node) => node.as_ref(),
-      Nil => return Ok(Expr::List(Nil)),
+      Nil => return Ok(Expression::List(Nil)),
     };
 
     let head = node.head.clone();
@@ -56,10 +58,12 @@ impl Evaluator {
     let head = self.eval_expr(head)?;
 
     let function = match head {
-      Expr::Atom(Function(function)) => function,
-      Expr::Atom(Macro(macr)) => return self.eval_call_macro(macr, tail),
-      Expr::Atom(Native(native)) => return self.eval_call_native(native, tail),
-      Expr::Atom(Special(special)) => {
+      Expression::Atom(Function(function)) => function,
+      Expression::Atom(Macro(macr)) => return self.eval_call_macro(macr, tail),
+      Expression::Atom(Native(native)) => {
+        return self.eval_call_native(native, tail)
+      }
+      Expression::Atom(Special(special)) => {
         return self.eval_call_special(special, tail)
       }
       _ => return Err(NotCallable),
@@ -72,12 +76,12 @@ impl Evaluator {
     let arguments = tail
       .into_iter()
       .map(|expr| self.eval_expr(expr))
-      .collect::<Result<Vec<Expr>, EvalError>>()?;
+      .collect::<Result<Vec<Expression>, EvalError>>()?;
 
     let original_frame = self.frame.clone();
     self.frame = Frame::with_parent(function.frame().clone());
 
-    let arguments: Vec<(&ast::Symbol, Expr)> = function
+    let arguments: Vec<(&ast::Symbol, Expression)> = function
       .parameters()
       .into_iter()
       .zip(arguments.into_iter())
@@ -98,8 +102,8 @@ impl Evaluator {
     &mut self,
     macr: Macro,
     tail: List,
-  ) -> Result<Expr, EvalError> {
-    use Expr::*;
+  ) -> Result<Expression, EvalError> {
+    use Expression::*;
 
     let original_frame = self.frame.clone();
     self.frame = Frame::with_parent(original_frame.clone());
@@ -120,7 +124,7 @@ impl Evaluator {
     &mut self,
     special: Special,
     tail: List,
-  ) -> Result<Expr, EvalError> {
+  ) -> Result<Expression, EvalError> {
     use Special::*;
 
     match special {
@@ -138,11 +142,11 @@ impl Evaluator {
     &mut self,
     native: Native,
     tail: List,
-  ) -> Result<Expr, EvalError> {
+  ) -> Result<Expression, EvalError> {
     let arguments = tail
       .into_iter()
       .map(|expr| self.eval_expr(expr))
-      .collect::<Result<Vec<Expr>, EvalError>>()?;
+      .collect::<Result<Vec<Expression>, EvalError>>()?;
 
     native.call(arguments)
   }
@@ -150,7 +154,7 @@ impl Evaluator {
   pub fn eval_call_special_begin(
     &mut self,
     tail: List,
-  ) -> Result<Expr, EvalError> {
+  ) -> Result<Expression, EvalError> {
     use EvalError::*;
 
     if tail.len() < 1 {
@@ -160,7 +164,7 @@ impl Evaluator {
     let mut tail = tail
       .into_iter()
       .map(|expr| self.eval_expr(expr))
-      .collect::<Result<Vec<Expr>, EvalError>>()?;
+      .collect::<Result<Vec<Expression>, EvalError>>()?;
 
     Ok(tail.pop().unwrap())
   }
@@ -168,7 +172,7 @@ impl Evaluator {
   pub fn eval_call_special_define(
     &mut self,
     tail: List,
-  ) -> Result<Expr, EvalError> {
+  ) -> Result<Expression, EvalError> {
     use EvalError::*;
 
     if tail.len() != 2 {
@@ -186,7 +190,7 @@ impl Evaluator {
   pub fn eval_call_special_function(
     &mut self,
     tail: List,
-  ) -> Result<Expr, EvalError> {
+  ) -> Result<Expression, EvalError> {
     use EvalError::*;
 
     if tail.len() != 2 {
@@ -203,7 +207,7 @@ impl Evaluator {
 
     let frame = self.frame.clone();
 
-    Ok(Expr::Atom(Atom::Function(Function::new(
+    Ok(Expression::Atom(Atom::Function(Function::new(
       frame, parameters, body,
     ))))
   }
@@ -211,7 +215,7 @@ impl Evaluator {
   pub fn eval_call_special_macro(
     &mut self,
     tail: List,
-  ) -> Result<Expr, EvalError> {
+  ) -> Result<Expression, EvalError> {
     use EvalError::*;
 
     if tail.len() != 2 {
@@ -227,13 +231,13 @@ impl Evaluator {
 
     let parameter = self.as_symbol(parameters.get(0).unwrap().clone())?;
 
-    Ok(Expr::Atom(Atom::Macro(Macro::new(parameter, body))))
+    Ok(Expression::Atom(Atom::Macro(Macro::new(parameter, body))))
   }
 
   pub fn eval_call_special_if(
     &mut self,
     tail: List,
-  ) -> Result<Expr, EvalError> {
+  ) -> Result<Expression, EvalError> {
     use EvalError::*;
 
     if tail.len() != 3 {
@@ -252,7 +256,7 @@ impl Evaluator {
   pub fn eval_call_special_quote(
     &mut self,
     tail: List,
-  ) -> Result<Expr, EvalError> {
+  ) -> Result<Expression, EvalError> {
     use EvalError::*;
 
     if tail.len() != 1 {
@@ -268,11 +272,11 @@ impl Evaluator {
     &mut self,
     operator: Operator,
     tail: List,
-  ) -> Result<Expr, EvalError> {
+  ) -> Result<Expression, EvalError> {
     use ast::Atom::*;
     use ast::List::*;
     use EvalError::*;
-    use Expr::*;
+    use Expression::*;
     use Operator::*;
 
     if tail.len() != 2 {
@@ -341,16 +345,19 @@ impl Evaluator {
     Ok(result)
   }
 
-  pub fn eval_atom(&mut self, atom: Atom) -> Result<Expr, EvalError> {
+  pub fn eval_atom(&mut self, atom: Atom) -> Result<Expression, EvalError> {
     use Atom::*;
 
     match atom {
       Symbol(symbol) => self.eval_symbol(symbol),
-      atom => Ok(Expr::Atom(atom)),
+      atom => Ok(Expression::Atom(atom)),
     }
   }
 
-  pub fn eval_symbol(&mut self, symbol: Symbol) -> Result<Expr, EvalError> {
+  pub fn eval_symbol(
+    &mut self,
+    symbol: Symbol,
+  ) -> Result<Expression, EvalError> {
     use EvalError::*;
 
     match self.frame.get(&symbol) {
@@ -359,19 +366,19 @@ impl Evaluator {
     }
   }
 
-  fn as_symbol(&mut self, expr: Expr) -> Result<Symbol, EvalError> {
+  fn as_symbol(&mut self, expr: Expression) -> Result<Symbol, EvalError> {
     use Atom::*;
     use EvalError::*;
 
     match expr {
-      Expr::Atom(Symbol(symbol)) => Ok(symbol),
+      Expression::Atom(Symbol(symbol)) => Ok(symbol),
       _ => Err(InvalidType),
     }
   }
 
-  fn as_list(&mut self, expr: Expr) -> Result<List, EvalError> {
+  fn as_list(&mut self, expr: Expression) -> Result<List, EvalError> {
     use EvalError::*;
-    use Expr::*;
+    use Expression::*;
 
     match expr {
       List(list) => Ok(list),
@@ -379,12 +386,12 @@ impl Evaluator {
     }
   }
 
-  fn as_number(&mut self, expr: Expr) -> Result<f64, EvalError> {
+  fn as_number(&mut self, expr: Expression) -> Result<f64, EvalError> {
     use Atom::*;
     use EvalError::*;
 
     match expr {
-      Expr::Atom(Number(number)) => Ok(number),
+      Expression::Atom(Number(number)) => Ok(number),
       _ => Err(InvalidType),
     }
   }
