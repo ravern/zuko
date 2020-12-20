@@ -50,6 +50,7 @@ where
   pub fn expression(&mut self) -> Result<Expression, ReadError> {
     match self.source.peek() {
       Some('(') => Ok(Expression::List(self.list()?)),
+      Some('\'') => Ok(Expression::List(self.quote()?)), // super special form for quote operator
       Some(_) => Ok(Expression::Atom(self.atom()?)),
       None => Err(ReadError::UnexpectedEof),
     }
@@ -84,7 +85,7 @@ where
     match self.source.peek() {
       Some('"') => Ok(Atom::String(self.string()?)),
       Some(char) if char.is_digit(10) => Ok(self.int_or_float()?),
-      Some(_) => Ok(Atom::Symbol(self.symbol()?)),
+      Some(_) => Ok(self.symbol_or_special()?),
       None => Err(ReadError::UnexpectedEof),
     }
   }
@@ -148,7 +149,7 @@ where
     }
   }
 
-  pub fn symbol(&mut self) -> Result<Symbol, ReadError> {
+  pub fn symbol_or_special(&mut self) -> Result<Atom, ReadError> {
     let mut symbol = vec![];
 
     loop {
@@ -161,7 +162,34 @@ where
       symbol.push(self.source.next().unwrap());
     }
 
-    Ok(Symbol::new(symbol.into_iter().collect::<String>()))
+    let symbol: String = symbol.into_iter().collect();
+
+    match symbol.as_str() {
+      "do" => return Ok(Atom::Special(Special::Do)),
+      "def" => return Ok(Atom::Special(Special::Define)),
+      "fn" => return Ok(Atom::Special(Special::Function)),
+      "macro" => return Ok(Atom::Special(Special::Macro)),
+      "if" => return Ok(Atom::Special(Special::If)),
+      "quote" => return Ok(Atom::Special(Special::Quote)),
+      _ => {}
+    }
+
+    Ok(Atom::Symbol(Symbol::new(symbol)))
+  }
+
+  pub fn quote(&mut self) -> Result<List, ReadError> {
+    match self.source.next() {
+      Some('\'') => {}
+      Some(char) => return Err(ReadError::UnexpectedChar(char)),
+      None => return Err(ReadError::UnexpectedEof),
+    }
+
+    let expression = self.expression()?;
+
+    Ok(List::cons(
+      Expression::Atom(Atom::Special(Special::Quote)),
+      List::cons(expression, List::Nil),
+    ))
   }
 
   pub fn whitespace(&mut self) {
@@ -242,6 +270,26 @@ mod tests {
         Expression::Atom(Atom::Special(Special::Do)),
         List::cons(
           Expression::Atom(Atom::Symbol(Symbol::new("test"))),
+          List::Nil
+        )
+      ))
+    );
+  }
+
+  #[test]
+  fn quote() {
+    assert_eq!(
+      read("'test".chars()).unwrap(),
+      Expression::List(List::cons(
+        Expression::Atom(Atom::Special(Special::Do)),
+        List::cons(
+          Expression::List(List::cons(
+            Expression::Atom(Atom::Special(Special::Quote)),
+            List::cons(
+              Expression::Atom(Atom::Symbol(Symbol::new("test"))),
+              List::Nil
+            )
+          )),
           List::Nil
         )
       ))

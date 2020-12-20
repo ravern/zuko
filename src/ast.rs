@@ -142,15 +142,15 @@ impl List {
   pub fn get(&self, index: usize) -> Option<&Expression> {
     use List::*;
 
-    let node = match self {
-      Cons(node) => node,
+    let cons = match self {
+      Cons(cons) => cons,
       Nil => return None,
     };
 
     if index == 0 {
-      Some(&node.car)
+      Some(&cons.car)
     } else {
-      node.cdr.get(index - 1)
+      cons.cdr.get(index - 1)
     }
   }
 
@@ -158,7 +158,7 @@ impl List {
     use List::*;
 
     match self {
-      Cons(node) => 1 + node.cdr.len(),
+      Cons(cons) => 1 + cons.cdr.len(),
       Nil => 0,
     }
   }
