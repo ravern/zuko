@@ -130,22 +130,12 @@ where
       int_or_float.push(self.source.next().unwrap());
     }
 
+    let int_or_float = int_or_float.into_iter().collect::<String>();
+
     if is_float {
-      Ok(Atom::Float(
-        int_or_float
-          .into_iter()
-          .collect::<String>()
-          .parse()
-          .unwrap(),
-      ))
+      Ok(Atom::Float(int_or_float.parse().unwrap()))
     } else {
-      Ok(Atom::Int(
-        int_or_float
-          .into_iter()
-          .collect::<String>()
-          .parse()
-          .unwrap(),
-      ))
+      Ok(Atom::Int(int_or_float.parse().unwrap()))
     }
   }
 
@@ -167,7 +157,7 @@ where
     match symbol.as_str() {
       "do" => return Ok(Atom::Special(Special::Do)),
       "def" => return Ok(Atom::Special(Special::Define)),
-      "fn" => return Ok(Atom::Special(Special::Function)),
+      "fun" => return Ok(Atom::Special(Special::Function)),
       "macro" => return Ok(Atom::Special(Special::Macro)),
       "if" => return Ok(Atom::Special(Special::If)),
       "quote" => return Ok(Atom::Special(Special::Quote)),
