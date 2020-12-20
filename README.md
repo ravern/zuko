@@ -26,13 +26,9 @@ $ ./zuko hello-world.zuko
 There are only six special forms in Zuko. These forms are built into the interpreter and should not be redefined.
 
 * `begin` takes in multiple expressions and runs them in order, returning the result of the last expression.
-
 * `if` evaluates the condition passed and returns either the
-
 * `function` creates a function.
-
 * `macro` creates a macro. It works similar to `function` except that it takes in only one argument — the raw list of terms passed into it as arguments — and evaluates its body twice when called.
-
 * `quote` returns the expression passed to it without evaluation.
 
 Everything else "built into" Zuko is defined in either the [prelude](https://github.com/ravern/zuko/blob/master/src/env/prelude.rs) or the [standard library](https://github.com/ravern/zuko/blob/master/src/lib.zuko). The prelude contains functions defined in Rust, so this is where low-level functionality like I/O can be introducted into Zuko. The standard library, on the other hand, is written in Zuko and contain much higher-level functions like math and data manipulation.
