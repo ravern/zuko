@@ -1,7 +1,7 @@
 [package]
 name = "zuko"
 version = "1.0.0"
-authors = ["Ravern Koh <ravern@taskade.com>"]
+authors = ["Ravern Koh <ravernkoh@gmail.com>"]
 edition = "2018"
 
 [dependencies]
