@@ -63,7 +63,7 @@ fn read_and_eval_line(
   line: &str,
 ) -> Result<Expression, RunError> {
   let expr = read::read(line.chars())?;
-  let expr = evaluator.eval_expr(expr)?;
+  let expr = evaluator.expression(expr)?;
   Ok(expr)
 }
 

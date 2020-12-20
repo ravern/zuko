@@ -10,7 +10,7 @@ use crate::read;
 
 pub fn eval(expr: Expression) -> Result<Expression, EvalError> {
   let mut evalutor = Evaluator::new();
-  evalutor.eval_expr(expr)
+  evalutor.expression(expr)
 }
 
 pub struct Evaluator {
@@ -24,17 +24,32 @@ impl Evaluator {
     };
 
     // Inject standard library.
-    let expr = read::read(include_str!("lib.zuko").chars()).unwrap();
-    evaluator.eval_expr(expr).unwrap();
+    let expression = read::read(include_str!("lib.zuko").chars()).unwrap();
+    evaluator.expression(expression).unwrap();
 
     evaluator
   }
 
-  pub fn eval_expr(
+  pub fn expression(
     &mut self,
     expression: Expression,
   ) -> Result<Expression, EvalError> {
-    Err(EvalError::WrongArity)
+    match expression {
+      Expression::List(list) => self.list(list),
+      Expression::Atom(atom) => self.atom(atom),
+    }
+  }
+
+  pub fn list(&mut self, list: List) -> Result<Expression, EvalError> {}
+
+  pub fn atom(&mut self, atom: Atom) -> Result<Expression, EvalError> {
+    match atom {
+      Atom::Symbol(symbol) => self
+        .frame
+        .get(&symbol)
+        .ok_or(EvalError::UndefinedSymbol(symbol)),
+      atom => Ok(Expression::Atom(atom)),
+    }
   }
 }
 
@@ -44,6 +59,8 @@ pub enum EvalError {
   InvalidType,
   #[error("arity is wrong")]
   WrongArity,
+  #[error("'{0}' is undefined")]
+  UndefinedSymbol(Symbol),
   #[error("expression not callable")]
   NotCallable,
   #[error("{0}")]

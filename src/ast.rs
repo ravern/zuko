@@ -1,4 +1,4 @@
-use std::rc::Rc;
+use std::{fmt, rc::Rc};
 
 use internment::Intern;
 
@@ -41,6 +41,16 @@ impl Symbol {
     S: Into<String>,
   {
     Symbol(Intern::new(symbol.into()))
+  }
+
+  pub fn as_str(&self) -> &str {
+    self.0.as_str()
+  }
+}
+
+impl fmt::Display for Symbol {
+  fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+    write!(f, "{}", self.0.as_str())
   }
 }
 
