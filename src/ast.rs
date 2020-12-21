@@ -130,6 +130,13 @@ impl Native {
   pub fn new(function: NativeFunction) -> Native {
     Native(Rc::new(function))
   }
+
+  pub fn call(
+    &self,
+    arguments: List,
+  ) -> Result<Expression, crate::eval::EvalError> {
+    self.0.as_ref()(arguments)
+  }
 }
 
 pub type NativeFunction =
@@ -147,6 +154,20 @@ impl List {
       car: Rc::new(car),
       cdr: Rc::new(cdr),
     })
+  }
+
+  pub fn car(&self) -> Option<&Expression> {
+    match self {
+      List::Cons(cons) => Some(cons.car.as_ref()),
+      List::Nil => None,
+    }
+  }
+
+  pub fn cdr(&self) -> Option<&List> {
+    match self {
+      List::Cons(cons) => Some(cons.cdr.as_ref()),
+      List::Nil => None,
+    }
   }
 
   pub fn get(&self, index: usize) -> Option<&Expression> {
@@ -184,8 +205,36 @@ impl List {
   }
 }
 
+impl IntoIterator for List {
+  type Item = Expression;
+  type IntoIter = ListIntoIter;
+
+  fn into_iter(self) -> Self::IntoIter {
+    ListIntoIter(self)
+  }
+}
+
 #[derive(Clone, Debug, PartialEq)]
 pub struct Cons {
   pub car: Rc<Expression>,
   pub cdr: Rc<List>,
+}
+
+pub struct ListIntoIter(List);
+
+impl Iterator for ListIntoIter {
+  type Item = Expression;
+
+  fn next(&mut self) -> Option<Expression> {
+    if let List::Nil = self.0 {
+      return None;
+    }
+
+    let car = self.0.car().unwrap().clone();
+    let cdr = self.0.cdr().unwrap().clone();
+
+    self.0 = cdr;
+
+    Some(car)
+  }
 }
