@@ -20,6 +20,7 @@ where
   S: Iterator<Item = char>,
 {
   source: Peekable<S>,
+  line: i64,
 }
 
 impl<S> Reader<S>
@@ -29,6 +30,7 @@ where
   pub fn new(source: S) -> Reader<S> {
     Reader {
       source: source.peekable(),
+      line: 1,
     }
   }
 
@@ -52,15 +54,17 @@ where
       Some('(') => Ok(Expression::List(self.list()?)),
       Some('\'') => Ok(Expression::List(self.quote()?)), // super special form for quote operator
       Some(_) => Ok(Expression::Atom(self.atom()?)),
-      None => Err(ReadError::UnexpectedEof),
+      None => Err(self.error(ReadErrorKind::UnexpectedEof)),
     }
   }
 
   pub fn list(&mut self) -> Result<List, ReadError> {
-    match self.source.next() {
+    match self.advance() {
       Some('(') => {}
-      Some(char) => return Err(ReadError::UnexpectedChar(char)),
-      None => return Err(ReadError::UnexpectedEof),
+      Some(char) => {
+        return Err(self.error(ReadErrorKind::UnexpectedChar(char)))
+      }
+      None => return Err(self.error(ReadErrorKind::UnexpectedEof)),
     }
 
     let mut list = List::Nil;
@@ -69,11 +73,11 @@ where
       self.whitespace();
       match self.source.peek() {
         Some(')') => {
-          self.source.next().unwrap();
+          self.advance().unwrap();
           break;
         }
         Some(_) => {}
-        None => return Err(ReadError::UnexpectedEof),
+        None => return Err(self.error(ReadErrorKind::UnexpectedEof)),
       }
       list = list.push(self.expression()?);
     }
@@ -86,15 +90,17 @@ where
       Some('"') => Ok(Atom::String(self.string()?)),
       Some(char) if char.is_digit(10) => Ok(self.int_or_float()?),
       Some(_) => Ok(self.symbol_or_special()?),
-      None => Err(ReadError::UnexpectedEof),
+      None => Err(self.error(ReadErrorKind::UnexpectedEof)),
     }
   }
 
   pub fn string(&mut self) -> Result<String, ReadError> {
-    match self.source.next() {
+    match self.advance() {
       Some('"') => {}
-      Some(char) => return Err(ReadError::UnexpectedChar(char)),
-      None => return Err(ReadError::UnexpectedEof),
+      Some(char) => {
+        return Err(self.error(ReadErrorKind::UnexpectedChar(char)))
+      }
+      None => return Err(self.error(ReadErrorKind::UnexpectedEof)),
     }
 
     let mut string = vec![];
@@ -102,13 +108,13 @@ where
     loop {
       match self.source.peek() {
         Some('"') => {
-          self.source.next().unwrap();
+          self.advance().unwrap();
           break;
         }
         Some(_) => {}
-        None => return Err(ReadError::UnexpectedEof),
+        None => return Err(self.error(ReadErrorKind::UnexpectedEof)),
       }
-      string.push(self.source.next().unwrap());
+      string.push(self.advance().unwrap());
     }
 
     Ok(string.into_iter().collect())
@@ -121,13 +127,18 @@ where
     loop {
       match self.source.peek() {
         Some(char) if is_terminal(*char) => break,
-        Some('.') if is_float => return Err(ReadError::UnexpectedChar('.')),
+        Some('.') if is_float => {
+          return Err(self.error(ReadErrorKind::UnexpectedChar('.')))
+        }
         Some('.') => is_float = true,
         Some(char) if char.is_digit(10) => {}
-        Some(char) => return Err(ReadError::UnexpectedChar(*char)),
+        Some(char) => {
+          let char = *char;
+          return Err(self.error(ReadErrorKind::UnexpectedChar(char)));
+        }
         None => break,
       }
-      int_or_float.push(self.source.next().unwrap());
+      int_or_float.push(self.advance().unwrap());
     }
 
     let int_or_float = int_or_float.into_iter().collect::<String>();
@@ -147,9 +158,9 @@ where
         Some(char) if is_terminal(*char) => break,
         Some(_) => {}
         None if !symbol.is_empty() => break,
-        None => return Err(ReadError::UnexpectedEof),
+        None => return Err(self.error(ReadErrorKind::UnexpectedEof)),
       }
-      symbol.push(self.source.next().unwrap());
+      symbol.push(self.advance().unwrap());
     }
 
     let symbol: String = symbol.into_iter().collect();
@@ -168,10 +179,12 @@ where
   }
 
   pub fn quote(&mut self) -> Result<List, ReadError> {
-    match self.source.next() {
+    match self.advance() {
       Some('\'') => {}
-      Some(char) => return Err(ReadError::UnexpectedChar(char)),
-      None => return Err(ReadError::UnexpectedEof),
+      Some(char) => {
+        return Err(self.error(ReadErrorKind::UnexpectedChar(char)))
+      }
+      None => return Err(self.error(ReadErrorKind::UnexpectedEof)),
     }
 
     let expression = self.expression()?;
@@ -188,8 +201,23 @@ where
         Some(char) if char.is_whitespace() => {}
         _ => break,
       }
-      self.source.next();
+      self.advance();
     }
+  }
+
+  fn advance(&mut self) -> Option<char> {
+    match self.source.next() {
+      Some('\n') => {
+        self.line += 1;
+        Some('\n')
+      }
+      Some(char) => Some(char),
+      None => None,
+    }
+  }
+
+  fn error(&self, kind: ReadErrorKind) -> ReadError {
+    ReadError::new(self.line, kind)
   }
 }
 
@@ -202,7 +230,20 @@ fn is_terminal(char: char) -> bool {
 }
 
 #[derive(Debug, Error)]
-pub enum ReadError {
+#[error("line {line}: {kind}")]
+pub struct ReadError {
+  kind: ReadErrorKind,
+  line: i64,
+}
+
+impl ReadError {
+  pub fn new(line: i64, kind: ReadErrorKind) -> ReadError {
+    ReadError { kind, line }
+  }
+}
+
+#[derive(Debug, Error)]
+pub enum ReadErrorKind {
   #[error("unexpected end of file")]
   UnexpectedEof,
   #[error("unexpected '{0}'")]

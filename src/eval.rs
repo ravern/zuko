@@ -20,12 +20,12 @@ pub struct Evaluator {
 impl Evaluator {
   pub fn new() -> Evaluator {
     let mut evaluator = Evaluator {
-      frame: Frame::base(),
+      frame: Frame::new(),
     };
 
     // Inject standard library.
-    let expression = read::read(include_str!("lib.zuko").chars()).unwrap();
-    evaluator.expression(expression).unwrap();
+    // let expression = read::read(include_str!("lib.zuko").chars()).unwrap();
+    // evaluator.expression(expression).unwrap();
 
     evaluator
   }
@@ -40,7 +40,9 @@ impl Evaluator {
     }
   }
 
-  pub fn list(&mut self, list: List) -> Result<Expression, EvalError> {}
+  pub fn list(&mut self, list: List) -> Result<Expression, EvalError> {
+    Err(EvalError::InvalidType)
+  }
 
   pub fn atom(&mut self, atom: Atom) -> Result<Expression, EvalError> {
     match atom {
