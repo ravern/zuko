@@ -1,4 +1,4 @@
-use std::{fmt, rc::Rc};
+use std::{error::Error, fmt, rc::Rc};
 
 use internment::Intern;
 
@@ -54,7 +54,7 @@ impl fmt::Display for Symbol {
   }
 }
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, PartialEq)]
 pub struct Function(Rc<FunctionInner>);
 
 impl Function {
@@ -80,6 +80,16 @@ impl Function {
 
   pub fn body(&self) -> &Expression {
     &self.0.body
+  }
+}
+
+impl fmt::Debug for Function {
+  fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+    write!(
+      f,
+      "Function {{ parameters: {:?}, body: {:?} }}",
+      self.0.parameters, self.0.body
+    )
   }
 }
 
@@ -131,16 +141,13 @@ impl Native {
     Native(Rc::new(function))
   }
 
-  pub fn call(
-    &self,
-    arguments: List,
-  ) -> Result<Expression, crate::eval::EvalError> {
+  pub fn call(&self, arguments: List) -> Result<Expression, Box<dyn Error>> {
     self.0.as_ref()(arguments)
   }
 }
 
 pub type NativeFunction =
-  fn(arguments: List) -> Result<Expression, crate::eval::EvalError>;
+  fn(arguments: List) -> Result<Expression, Box<dyn Error>>;
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum List {

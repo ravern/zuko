@@ -2,11 +2,10 @@ use std::error::Error;
 
 use thiserror::Error;
 
-use crate::ast::{
-  self, Atom, Expression, Function, List, Macro, Native, Special, Symbol,
+use crate::{
+  ast::{Atom, Expression, Function, List, Macro, Native, Special, Symbol},
+  env::Frame,
 };
-use crate::env::Frame;
-use crate::read;
 
 pub fn eval(expr: Expression) -> Result<Expression, EvalError> {
   let mut evalutor = Evaluator::new();
@@ -37,29 +36,30 @@ impl Evaluator {
   pub fn list(&mut self, list: List) -> Result<Expression, EvalError> {
     if let List::Nil = list {
       return Ok(Expression::List(list));
-    }
+    };
 
     let callable = self.expression(list.car().unwrap().clone())?;
+    let arguments = list.cdr().unwrap().clone();
 
     match callable {
-      Expression::Atom(Atom::Function(_)) => self.function(list),
-      Expression::Atom(Atom::Macro(_)) => self.macro_(list),
-      Expression::Atom(Atom::Special(_)) => self.special(list),
-      Expression::Atom(Atom::Native(_)) => self.native(list),
+      Expression::Atom(Atom::Function(function)) => {
+        self.function(function, arguments)
+      }
+      Expression::Atom(Atom::Macro(macro_)) => self.macro_(macro_, arguments),
+      Expression::Atom(Atom::Special(special)) => {
+        self.special(special, arguments)
+      }
+      Expression::Atom(Atom::Native(native)) => self.native(native, arguments),
       _ => Err(EvalError::NotCallable),
     }
   }
 
-  pub fn function(&mut self, list: List) -> Result<Expression, EvalError> {
-    let function = match list.car().unwrap() {
-      Expression::Atom(Atom::Function(function)) => function,
-      _ => return Err(EvalError::NotCallable),
-    };
-
-    let arguments = list
-      .cdr()
-      .unwrap()
-      .clone()
+  pub fn function(
+    &mut self,
+    function: Function,
+    arguments: List,
+  ) -> Result<Expression, EvalError> {
+    let arguments = arguments
       .into_iter()
       .map(|expression| self.expression(expression))
       .collect::<Result<Vec<Expression>, EvalError>>()?;
@@ -80,13 +80,12 @@ impl Evaluator {
     result
   }
 
-  pub fn macro_(&mut self, list: List) -> Result<Expression, EvalError> {
-    let macro_ = match list.car().unwrap() {
-      Expression::Atom(Atom::Macro(macro_)) => macro_,
-      _ => return Err(EvalError::NotCallable),
-    };
-
-    let argument = list.get(1).ok_or(EvalError::WrongArity)?.clone();
+  pub fn macro_(
+    &mut self,
+    macro_: Macro,
+    arguments: List,
+  ) -> Result<Expression, EvalError> {
+    let argument = arguments.get(1).ok_or(EvalError::WrongArity)?.clone();
 
     let original_frame = self.frame.clone();
     self.frame = Frame::with_parent(self.frame.clone());
@@ -100,21 +99,20 @@ impl Evaluator {
     self.expression(body)
   }
 
-  pub fn special(&mut self, list: List) -> Result<Expression, EvalError> {
-    let special = match list.car().unwrap() {
-      Expression::Atom(Atom::Special(special)) => special,
-      _ => return Err(EvalError::NotCallable),
-    };
-
-    let arguments = list.cdr().unwrap().clone();
-
+  pub fn special(
+    &mut self,
+    special: Special,
+    arguments: List,
+  ) -> Result<Expression, EvalError> {
     match special {
       Special::Do => self.special_do(arguments),
       Special::Define => self.special_define(arguments),
       Special::Function => self.special_function(arguments),
       Special::Macro => self.special_macro(arguments),
       Special::If => self.special_if(arguments),
-      Special::Quote => Ok(list.get(1).ok_or(EvalError::WrongArity)?.clone()),
+      Special::Quote => {
+        Ok(arguments.car().ok_or(EvalError::WrongArity)?.clone())
+      }
     }
   }
 
@@ -139,7 +137,8 @@ impl Evaluator {
       _ => return Err(EvalError::InvalidType),
     };
 
-    let expression = arguments.get(1).ok_or(EvalError::WrongArity)?.clone();
+    let expression = self
+      .expression(arguments.get(1).ok_or(EvalError::WrongArity)?.clone())?;
 
     self.frame.set(name, expression.clone());
 
@@ -200,15 +199,12 @@ impl Evaluator {
     }
   }
 
-  pub fn native(&mut self, list: List) -> Result<Expression, EvalError> {
-    let native = match list.car().unwrap() {
-      Expression::Atom(Atom::Native(native)) => native,
-      _ => return Err(EvalError::NotCallable),
-    };
-
-    let arguments = list.cdr().unwrap().clone();
-
-    native.call(arguments)
+  pub fn native(
+    &mut self,
+    native: Native,
+    arguments: List,
+  ) -> Result<Expression, EvalError> {
+    native.call(arguments).map_err(EvalError::Native)
   }
 
   pub fn atom(&mut self, atom: Atom) -> Result<Expression, EvalError> {
