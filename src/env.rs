@@ -4,10 +4,6 @@ use std::rc::Rc;
 
 use crate::ast::{Expression, Symbol};
 
-pub use self::prelude::build_base_frame;
-
-mod prelude;
-
 #[derive(Clone, Debug, PartialEq)]
 pub struct Frame {
   inner: Rc<RefCell<FrameInner>>,
@@ -27,10 +23,6 @@ impl Frame {
         variables: BTreeMap::new(),
       })),
     }
-  }
-
-  pub fn base() -> Frame {
-    build_base_frame()
   }
 
   pub fn with_parent(parent: Frame) -> Frame {

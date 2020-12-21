@@ -133,7 +133,7 @@ impl Native {
 }
 
 pub type NativeFunction =
-  fn(arguments: Vec<Expression>) -> Result<Expression, crate::eval::EvalError>;
+  fn(arguments: List) -> Result<Expression, crate::eval::EvalError>;
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum List {
